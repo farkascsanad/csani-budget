@@ -1,9 +1,13 @@
 package hu.csani.budget.views.accounts;
 
+import java.util.Optional;
+
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.vaadin.lineawesome.LineAwesomeIconUrl;
+
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dependency.Uses;
 import com.vaadin.flow.component.formlayout.FormLayout;
@@ -19,196 +23,173 @@ import com.vaadin.flow.component.splitlayout.SplitLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.BeanValidationBinder;
 import com.vaadin.flow.data.binder.ValidationException;
-import com.vaadin.flow.data.renderer.LitRenderer;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.spring.data.VaadinSpringDataHelpers;
-import hu.csani.budget.data.SamplePerson;
-import hu.csani.budget.services.SamplePersonService;
-import java.util.Optional;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.vaadin.lineawesome.LineAwesomeIconUrl;
+
+import hu.csani.budget.data.Account;
+import hu.csani.budget.services.AccountService;
 
 @PageTitle("Accounts")
-@Route("master-detail2/:samplePersonID?/:action?(edit)")
+@Route("accounts/:accountId?/:action?(edit)")
 @Menu(order = 1, icon = LineAwesomeIconUrl.COLUMNS_SOLID)
 @Uses(Icon.class)
 public class AccountsView extends Div implements BeforeEnterObserver {
 
-    private final String SAMPLEPERSON_ID = "samplePersonID";
-    private final String SAMPLEPERSON_EDIT_ROUTE_TEMPLATE = "master-detail2/%s/edit";
+	private final String ACCOUNT_ID = "accountId";
+	private final String EDIT_ROUTE_TEMPLATE = "accounts/%s/edit";
 
-    private final Grid<SamplePerson> grid = new Grid<>(SamplePerson.class, false);
+	private final Grid<Account> grid = new Grid<>(Account.class, false);
 
-    private TextField firstName;
-    private TextField lastName;
-    private TextField email;
-    private TextField phone;
-    private DatePicker dateOfBirth;
-    private TextField occupation;
-    private TextField role;
-    private Checkbox important;
+	private TextField accountName;
+	private TextField accountNumber;
+	private TextField ibanAccountNumber;
+	private TextField accountDescription;
+	private DatePicker accountActiveFrom;
+	private DatePicker accountActiveTo;
+	private TextField tablePattern;
+	private TextField accountType;
 
-    private final Button cancel = new Button("Cancel");
-    private final Button save = new Button("Save");
+	private final Button cancel = new Button("Cancel");
+	private final Button save = new Button("Save");
 
-    private final BeanValidationBinder<SamplePerson> binder;
+	private final BeanValidationBinder<Account> binder;
 
-    private SamplePerson samplePerson;
+	private Account account;
 
-    private final SamplePersonService samplePersonService;
+	private final AccountService accountService;
 
-    public AccountsView(SamplePersonService samplePersonService) {
-        this.samplePersonService = samplePersonService;
-        addClassNames("accounts-view");
+	public AccountsView(AccountService accountService) {
+		this.accountService = accountService;
+		addClassNames("accounts-view");
 
-        // Create UI
-        SplitLayout splitLayout = new SplitLayout();
+		SplitLayout splitLayout = new SplitLayout();
+		createGridLayout(splitLayout);
+		createEditorLayout(splitLayout);
+		add(splitLayout);
 
-        createGridLayout(splitLayout);
-        createEditorLayout(splitLayout);
+		grid.addColumn(Account::getAccountName).setHeader("Name").setAutoWidth(true);
+		grid.addColumn(Account::getAccountNumber).setHeader("Number").setAutoWidth(true);
+		grid.addColumn(Account::getIbanAccountNumber).setHeader("IBAN").setAutoWidth(true);
+		grid.addColumn(Account::getAccountType).setHeader("Type").setAutoWidth(true);
+		grid.addColumn(Account::getAccountActiveFrom).setHeader("Active From").setAutoWidth(true);
+		grid.addColumn(Account::getAccountActiveTo).setHeader("Active To").setAutoWidth(true);
 
-        add(splitLayout);
+		grid.setItems(query -> accountService.findAll(VaadinSpringDataHelpers.toSpringPageRequest(query)).stream());
+		grid.addThemeVariants(GridVariant.LUMO_NO_BORDER);
 
-        // Configure Grid
-        grid.addColumn("firstName").setAutoWidth(true);
-        grid.addColumn("lastName").setAutoWidth(true);
-        grid.addColumn("email").setAutoWidth(true);
-        grid.addColumn("phone").setAutoWidth(true);
-        grid.addColumn("dateOfBirth").setAutoWidth(true);
-        grid.addColumn("occupation").setAutoWidth(true);
-        grid.addColumn("role").setAutoWidth(true);
-        LitRenderer<SamplePerson> importantRenderer = LitRenderer.<SamplePerson>of(
-                "<vaadin-icon icon='vaadin:${item.icon}' style='width: var(--lumo-icon-size-s); height: var(--lumo-icon-size-s); color: ${item.color};'></vaadin-icon>")
-                .withProperty("icon", important -> important.isImportant() ? "check" : "minus").withProperty("color",
-                        important -> important.isImportant()
-                                ? "var(--lumo-primary-text-color)"
-                                : "var(--lumo-disabled-text-color)");
+		grid.asSingleSelect().addValueChangeListener(event -> {
+			if (event.getValue() != null) {
+				UI.getCurrent().navigate(String.format(EDIT_ROUTE_TEMPLATE, event.getValue().getAccountId()));
+			} else {
+				clearForm();
+				UI.getCurrent().navigate(AccountsView.class);
+			}
+		});
 
-        grid.addColumn(importantRenderer).setHeader("Important").setAutoWidth(true);
+		binder = new BeanValidationBinder<>(Account.class);
+		binder.bindInstanceFields(this);
 
-        grid.setItems(query -> samplePersonService.list(VaadinSpringDataHelpers.toSpringPageRequest(query)).stream());
-        grid.addThemeVariants(GridVariant.LUMO_NO_BORDER);
+		cancel.addClickListener(e -> {
+			clearForm();
+			refreshGrid();
+		});
 
-        // when a row is selected or deselected, populate form
-        grid.asSingleSelect().addValueChangeListener(event -> {
-            if (event.getValue() != null) {
-                UI.getCurrent().navigate(String.format(SAMPLEPERSON_EDIT_ROUTE_TEMPLATE, event.getValue().getId()));
-            } else {
-                clearForm();
-                UI.getCurrent().navigate(AccountsView.class);
-            }
-        });
+		save.addClickListener(e -> {
+			try {
+				if (this.account == null) {
+					this.account = new Account();
+				}
+				binder.writeBean(this.account);
+				accountService.save(this.account);
+				clearForm();
+				refreshGrid();
+				Notification.show("Account saved successfully", 3000, Position.TOP_END);
+				UI.getCurrent().navigate(AccountsView.class);
+			} catch (ObjectOptimisticLockingFailureException exception) {
+				Notification n = Notification
+						.show("Error saving account. Someone else updated it while you were editing.");
+				n.setPosition(Position.MIDDLE);
+				n.addThemeVariants(NotificationVariant.LUMO_ERROR);
+			} catch (ValidationException validationException) {
+				Notification.show("Validation failed. Please check your input.");
+			}
+		});
+	}
 
-        // Configure Form
-        binder = new BeanValidationBinder<>(SamplePerson.class);
+	@Override
+	public void beforeEnter(BeforeEnterEvent event) {
+		Optional<Integer> accountId = event.getRouteParameters().get(ACCOUNT_ID).map(Integer::parseInt);
+		if (accountId.isPresent()) {
+			Optional<Account> accountFromBackend = accountService.findById(accountId.get());
+			if (accountFromBackend.isPresent()) {
+				populateForm(accountFromBackend.get());
+			} else {
+				Notification.show(String.format("Account not found. ID = %s", accountId.get()), 3000,
+						Position.BOTTOM_START);
+				refreshGrid();
+				event.forwardTo(AccountsView.class);
+			}
+		}
+	}
 
-        // Bind fields. This is where you'd define e.g. validation rules
+	private void createEditorLayout(SplitLayout splitLayout) {
+		Div editorLayoutDiv = new Div();
+		editorLayoutDiv.setClassName("editor-layout");
 
-        binder.bindInstanceFields(this);
+		Div editorDiv = new Div();
+		editorDiv.setClassName("editor");
+		editorLayoutDiv.add(editorDiv);
 
-        cancel.addClickListener(e -> {
-            clearForm();
-            refreshGrid();
-        });
+		FormLayout formLayout = new FormLayout();
+		accountName = new TextField("Account Name");
+		accountNumber = new TextField("Account Number");
+		ibanAccountNumber = new TextField("IBAN");
+		accountDescription = new TextField("Description");
+		accountActiveFrom = new DatePicker("Active From");
+		accountActiveTo = new DatePicker("Active To");
+		tablePattern = new TextField("Table Pattern");
+		accountType = new TextField("Account Type");
 
-        save.addClickListener(e -> {
-            try {
-                if (this.samplePerson == null) {
-                    this.samplePerson = new SamplePerson();
-                }
-                binder.writeBean(this.samplePerson);
-                samplePersonService.save(this.samplePerson);
-                clearForm();
-                refreshGrid();
-                Notification.show("Data updated");
-                UI.getCurrent().navigate(AccountsView.class);
-            } catch (ObjectOptimisticLockingFailureException exception) {
-                Notification n = Notification.show(
-                        "Error updating the data. Somebody else has updated the record while you were making changes.");
-                n.setPosition(Position.MIDDLE);
-                n.addThemeVariants(NotificationVariant.LUMO_ERROR);
-            } catch (ValidationException validationException) {
-                Notification.show("Failed to update the data. Check again that all values are valid");
-            }
-        });
-    }
+		formLayout.add(accountName, accountNumber, ibanAccountNumber, accountDescription, accountActiveFrom,
+				accountActiveTo, tablePattern,  accountType);
 
-    @Override
-    public void beforeEnter(BeforeEnterEvent event) {
-        Optional<Long> samplePersonId = event.getRouteParameters().get(SAMPLEPERSON_ID).map(Long::parseLong);
-        if (samplePersonId.isPresent()) {
-            Optional<SamplePerson> samplePersonFromBackend = samplePersonService.get(samplePersonId.get());
-            if (samplePersonFromBackend.isPresent()) {
-                populateForm(samplePersonFromBackend.get());
-            } else {
-                Notification.show(
-                        String.format("The requested samplePerson was not found, ID = %s", samplePersonId.get()), 3000,
-                        Notification.Position.BOTTOM_START);
-                // when a row is selected but the data is no longer available,
-                // refresh grid
-                refreshGrid();
-                event.forwardTo(AccountsView.class);
-            }
-        }
-    }
+		editorDiv.add(formLayout);
+		createButtonLayout(editorLayoutDiv);
 
-    private void createEditorLayout(SplitLayout splitLayout) {
-        Div editorLayoutDiv = new Div();
-        editorLayoutDiv.setClassName("editor-layout");
+		splitLayout.addToSecondary(editorLayoutDiv);
+	}
 
-        Div editorDiv = new Div();
-        editorDiv.setClassName("editor");
-        editorLayoutDiv.add(editorDiv);
+	private void createButtonLayout(Div editorLayoutDiv) {
+		HorizontalLayout buttonLayout = new HorizontalLayout();
+		buttonLayout.setClassName("button-layout");
+		cancel.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+		save.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+		buttonLayout.add(save, cancel);
+		editorLayoutDiv.add(buttonLayout);
+	}
 
-        FormLayout formLayout = new FormLayout();
-        firstName = new TextField("First Name");
-        lastName = new TextField("Last Name");
-        email = new TextField("Email");
-        phone = new TextField("Phone");
-        dateOfBirth = new DatePicker("Date Of Birth");
-        occupation = new TextField("Occupation");
-        role = new TextField("Role");
-        important = new Checkbox("Important");
-        formLayout.add(firstName, lastName, email, phone, dateOfBirth, occupation, role, important);
+	private void createGridLayout(SplitLayout splitLayout) {
+		Div wrapper = new Div();
+		wrapper.setClassName("grid-wrapper");
+		splitLayout.addToPrimary(wrapper);
+		wrapper.add(grid);
+	}
 
-        editorDiv.add(formLayout);
-        createButtonLayout(editorLayoutDiv);
+	private void refreshGrid() {
+		grid.select(null);
+		grid.getDataProvider().refreshAll();
+	}
 
-        splitLayout.addToSecondary(editorLayoutDiv);
-    }
+	private void clearForm() {
+		populateForm(null);
+	}
 
-    private void createButtonLayout(Div editorLayoutDiv) {
-        HorizontalLayout buttonLayout = new HorizontalLayout();
-        buttonLayout.setClassName("button-layout");
-        cancel.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-        save.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        buttonLayout.add(save, cancel);
-        editorLayoutDiv.add(buttonLayout);
-    }
-
-    private void createGridLayout(SplitLayout splitLayout) {
-        Div wrapper = new Div();
-        wrapper.setClassName("grid-wrapper");
-        splitLayout.addToPrimary(wrapper);
-        wrapper.add(grid);
-    }
-
-    private void refreshGrid() {
-        grid.select(null);
-        grid.getDataProvider().refreshAll();
-    }
-
-    private void clearForm() {
-        populateForm(null);
-    }
-
-    private void populateForm(SamplePerson value) {
-        this.samplePerson = value;
-        binder.readBean(this.samplePerson);
-
-    }
+	private void populateForm(Account value) {
+		this.account = value;
+		binder.readBean(this.account);
+	}
 }
