@@ -221,7 +221,9 @@ public class UploadView extends VerticalLayout {
 			}
 
 			Budget row = new Budget();
-
+			
+			System.out.println(budget);
+			
 			if (rule.getDefaultAccount() != null)
 				row.setAccountId(rule.getDefaultAccount().getAccountId());
 
@@ -233,7 +235,7 @@ public class UploadView extends VerticalLayout {
 
 			if (rule.getSourceBookingDateColumn() != null && rule.getBookingDateFormat() != null) {
 				DateTimeFormatter dtf = DateTimeFormatter.ofPattern(rule.getBookingDateFormat());
-				LocalDate dt = LocalDate.parse(rule.getSourceBookingDateColumn(), dtf);
+				LocalDate dt = LocalDate.parse(budget.get(rule.getSourceBookingDateColumn()), dtf);
 				row.setBookingDate(dt);
 			}
 			String decimalSeparator = rule.getDecimalSeparator();
