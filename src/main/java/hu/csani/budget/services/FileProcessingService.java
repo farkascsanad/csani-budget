@@ -3,6 +3,8 @@ package hu.csani.budget.services;
 import com.github.pjfanning.xlsx.StreamingReader;
 import hu.csani.budget.data.Budget;
 import hu.csani.budget.data.UploadRule;
+
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.stereotype.Service;
 
@@ -21,157 +23,104 @@ import java.util.stream.Collectors;
 @Service
 public class FileProcessingService {
 
-    public List<List<String>> readCSV(InputStream input) throws IOException {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(input))) {
-            return reader.lines()
-                    .map(this::parseCSVLine)
-                    .collect(Collectors.toList());
-        }
-    }
 
-    private List<String> parseCSVLine(String line) {
-        return Arrays.asList(line.split("\\s*,\\s*", -1));
-    }
+	public List<List<String>> readCSV(InputStream input) throws IOException {
+		List<List<String>> allRows = new ArrayList<>();
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(input))) {
+			String line;
+			while ((line = reader.readLine()) != null) {
+				List<String> row = parseCSVLine(line);
+				allRows.add(row);
+			}
+		}
+		return allRows;
+	}
+	// Simple CSV parser (does not handle quoted fields with commas)
+	private List<String> parseCSVLine(String line) {
+		return Arrays.asList(line.split("\\s*,\\s*", -1));
+	}
+	
+	
+	
+	
+	
+	public List<List<String>> readXLSX(InputStream tempFile, String sheetName)
+			throws InvalidFormatException, IOException {
 
-    public List<List<String>> readXLSX(InputStream input, String sheetName) throws IOException {
-        try (Workbook workbook = StreamingReader.builder()
-                .rowCacheSize(100)
-                .bufferSize(4096)
-                .open(input)) {
+		List<List<String>> data = new ArrayList<>();
 
-            Sheet sheet = (sheetName != null)
-                    ? workbook.getSheet(sheetName)
-                    : workbook.getSheetAt(0);
+//		InputStream is = new FileInputStream(tempFile);
+//		StreamingReader reader = StreamingReader.builder().rowCacheSize(100) // number																				 of																				 rows																				 to																				 keep																				 in																				 memory
+////																				 (defaults
+////																				 to
+////																				 10)
+//				.bufferSize(4096) // buffer size to use when reading InputStream
+//				// to file (defaults to 1024)
+//				.sheetIndex(0) // index of sheet to use (defaults to 0)
+//				.read(is); // InputStream or File for XLSX file (required)
 
-            List<List<String>> data = new ArrayList<>();
-            int headerCount = 0;
+//		The StreamingWorkbook is an autocloseable resource, and it's important that you close it to free the filesystem resource it consumed. With Java 8, you can do this:
+		try (Workbook open = StreamingReader.builder().rowCacheSize(100).bufferSize(4096).open(tempFile);) {
+			Sheet sheet = null;
+			if (sheetName != null) {
+				sheet = open.getSheet(sheetName);
+			} else {
+				sheet = open.getSheetAt(0);
+			}
+			// The first row defines how many columns we ready! To avoid any random trash in
+			// the rows Wrapper needed because of lamda operator
+			var wrapper = new Object() {
+				int header = 0;
+			};
 
-            DecimalFormat df = new DecimalFormat("0.##########");
-            df.setDecimalFormatSymbols(new DecimalFormatSymbols(Locale.US));
-            DataFormatter formatter = new DataFormatter();
-            formatter.setUseCachedValuesForFormulaCells(true);
-            formatter.setUse4DigitYearsInAllDateFormats(true);
+			DecimalFormat df = new DecimalFormat("0.##########");
+			// This force the decimal format to . intread of ,
+			df.setDecimalFormatSymbols(new DecimalFormatSymbols(Locale.US));
 
-            for (Row row : sheet) {
-                if (headerCount == 0) {
-                    headerCount = row.getPhysicalNumberOfCells();
-                }
-                List<String> rowData = new ArrayList<>();
-                for (int i = 0; i < headerCount; i++) {
-                    Cell cell = row.getCell(i);
-                    String value = "";
-                    if (cell != null) {
-                        if (DateUtil.isCellDateFormatted(cell)) {
-                            value = formatter.formatRawCellContents(
-                                    cell.getNumericCellValue(), 59, "yyyy-MM-dd");
-                        } else if (cell.getCellType() == CellType.NUMERIC) {
-                            value = df.format(cell.getNumericCellValue());
-                        } else {
-                            value = formatter.formatCellValue(cell);
-                        }
-                    }
-                    rowData.add(value);
-                }
-                data.add(rowData);
-            }
-            return data;
-        }
-    }
+			DataFormatter dataFormatter = new DataFormatter();
+			dataFormatter.setUseCachedValuesForFormulaCells(true);
+			dataFormatter.setUse4DigitYearsInAllDateFormats(true);
 
-    public List<Map<String, String>> convertToMap(List<String> headers, List<List<String>> rows) {
-        return rows.stream()
-                .skip(1)
-                .map(row -> {
-                    Map<String, String> map = new LinkedHashMap<>();
-                    for (int i = 0; i < headers.size(); i++) {
-                        map.put(headers.get(i), i < row.size() ? row.get(i) : "");
-                    }
-                    return map;
-                })
-                .collect(Collectors.toList());
-    }
+			sheet.rowIterator().forEachRemaining(e -> {
 
-    public List<Budget> mapToBudgetList(UploadRule rule, List<Map<String, String>> records) {
-        List<Budget> budgets = new ArrayList<>();
-        boolean first = true;
-        for (Map<String, String> record : records) {
-            if (first) { first = false; continue; } // skip header row
-            Budget b = new Budget();
-            if (rule.getDefaultAccount() != null)
-                b.setAccountId(rule.getDefaultAccount().getAccountId());
+				List<String> stringArrayRow = new LinkedList<>();
 
-            // Dates
-            applyDateField(record, rule.getSourceTransactiongDateColumn(), rule.getTransactionDateFormat(), b::setTransactionDate);
-            applyDateField(record, rule.getSourceBookingDateColumn(), rule.getBookingDateFormat(), b::setBookingDate);
+				int physicalNumberOfCells = e.getPhysicalNumberOfCells();
+				if (wrapper.header == 0)
+					wrapper.header = physicalNumberOfCells;
 
-            // Amounts
-            parseAmounts(record, rule, b);
+				for (int i = 0; i < wrapper.header; i++) {
+					Cell cell = e.getCell(i);
+					String cellStringValue = null;
+					if (cell != null) {
+//						cellStringValue = cell.getStringCellValue();
+//						System.out.println("Defaul: " + cellStringValue);
+//						String value = dataFormatter.formatCellValue(cell); // from apache poi 5.2.0 on
+//						System.out.println("Formatter: " + value);
 
-            // Currency
-            if (rule.getSourceCurrencyColumn() != null) {
-                String cur = record.getOrDefault(rule.getSourceCurrencyColumn(), "HUF");
-                b.setCurrency(cur);
-            }
-
-            // Other party, type, note
-            b.setOtherPartyName(concatColumns(record, rule.getSourceOtherPartyNameColumns()));
-            b.setOtherPartyAccountNumber(concatColumns(record, rule.getSourceOtherPartyAccountNumberColumns()));
-            b.setTransactionType(record.getOrDefault(rule.getSourceTransactionTypeColumn(), "").trim());
-            b.setNote(concatColumns(record, rule.getSourceNoteColumns()));
-
-            budgets.add(b);
-        }
-        return budgets;
-    }
-
-    private void applyDateField(Map<String, String> record, String col, String fmt, java.util.function.Consumer<LocalDate> setter) {
-        if (col != null && fmt != null) {
-            String raw = record.get(col);
-            LocalDate d = LocalDate.parse(raw, DateTimeFormatter.ofPattern(fmt));
-            setter.accept(d);
-        }
-    }
-
-    private void parseAmounts(Map<String, String> rec, UploadRule rule, Budget b) {
-        String sep = rule.getDecimalSeparator();
-        String regex = "[^\\-0-9" + sep + "]";
-        if (rule.getAmountSplitted()) {
-            String inRaw = rec.getOrDefault(rule.getSourceAmountInColumn(), "").replaceAll(regex, "");
-            String outRaw = rec.getOrDefault(rule.getSourceAmountOutColumn(), "").replaceAll(regex, "");
-            BigDecimal in = toDecimal(inRaw, sep);
-            BigDecimal out = toDecimal(outRaw, sep);
-            b.setAmountIn(in);
-            b.setAmountOut(out);
-            b.setAmount(in.add(out));
-            b.setDirection(in.add(out).signum() >= 0 ? "+" : "-");
-        } else {
-            String raw = rec.getOrDefault(rule.getSourceAmountColumn(), "").replaceAll(regex, "");
-            BigDecimal amt = toDecimal(raw, sep);
-            if (amt.signum() >= 0) {
-                b.setAmountIn(amt);
-                b.setAmountOut(BigDecimal.ZERO);
-                b.setDirection("+");
-            } else {
-                b.setAmountIn(BigDecimal.ZERO);
-                b.setAmountOut(amt);
-                b.setDirection("-");
-            }
-            b.setAmount(amt);
-        }
-    }
-
-    private BigDecimal toDecimal(String raw, String sep) {
-        if (!".".equals(sep)) raw = raw.replace(sep, ".");
-        return (raw == null || raw.isEmpty()) ? BigDecimal.ZERO : new BigDecimal(raw);
-    }
-
-    private String concatColumns(Map<String, String> rec, String cols) {
-        if (cols == null) return null;
-        StringBuilder sb = new StringBuilder();
-        for (String c : cols.split(";")) {
-            sb.append(rec.getOrDefault(c, "").trim());
-        }
-        return sb.toString();
-    }
+						try {
+							if (DateUtil.isCellDateFormatted(cell)) {
+								String formatRawCellContents = dataFormatter
+										.formatRawCellContents(cell.getNumericCellValue(), 59, "yyyy-mm-dd");
+								cellStringValue = formatRawCellContents;
+//								System.out.println(formatRawCellContents);
+							}
+							// Megpróbáljuk még számként beolvasni!
+							if (cellStringValue == null && !cell.getStringCellValue().startsWith("0")) {
+								cellStringValue = df.format(cell.getNumericCellValue());
+							}
+						} catch (NumberFormatException ne) {
+							cellStringValue = cell.getStringCellValue();
+						}
+						// Ha csak egy sima 0-van a cellában, akkor is ez a megoldás.
+						if (cellStringValue == null)
+							cellStringValue = cell.getStringCellValue();
+					}
+					stringArrayRow.add(cellStringValue);
+				}
+				data.add(stringArrayRow);
+			});
+			return data;
+		}
+	}
 }
-
