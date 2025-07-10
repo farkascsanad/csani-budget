@@ -1,4 +1,4 @@
-package hu.csani.budget.views;
+ package hu.csani.budget.views;
 
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;

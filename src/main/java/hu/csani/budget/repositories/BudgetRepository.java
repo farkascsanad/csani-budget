@@ -20,4 +20,13 @@ public interface BudgetRepository extends JpaRepository<Budget, Integer> {
 	// 3. Budgets by accountId and transaction date range
 	List<Budget> findByAccountIdAndTransactionDateBetween(Integer accountId, LocalDate startDate, LocalDate endDate);
 
+	// Budgets with no category
+	List<Budget> findTop10ByCategoryIsNullOrderByAmountDesc();
+	
+
+	// Budgets with no category
+	List<Budget> findTop10ByCategoryIsNullOrderByAmountAsc();
+
+	// Budgets with a specific category id
+	List<Budget> findTop10ByCategoryCategoryIdOrderByAmountDesc(Long categoryId);
 }

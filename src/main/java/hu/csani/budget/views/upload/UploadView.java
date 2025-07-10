@@ -3,12 +3,10 @@ package hu.csani.budget.views.upload;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,10 +15,8 @@ import org.vaadin.lineawesome.LineAwesomeIconUrl;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
-import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.Grid.MultiSortPriority;
-import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -39,7 +35,7 @@ import hu.csani.budget.services.UploadRuleService;
 
 @PageTitle("Upload")
 @Route("upload")
-@Menu(order = 3, icon = LineAwesomeIconUrl.PENCIL_RULER_SOLID)
+@Menu(order =1, icon = LineAwesomeIconUrl.PENCIL_RULER_SOLID)
 public class UploadView extends VerticalLayout {
 
 	private List<List<String>> allRows = new ArrayList<>();
@@ -234,33 +230,19 @@ public class UploadView extends VerticalLayout {
 				List<Budget> testUploadRule = uploadRuleService.testUploadRule(selected, exampleTable);
 				setBudgetTable(testUploadRule);
 				scrollToBottom();
+				mergeDbWithUpload();
 			} else {
 				Notification.show("Please select an Upload Rule first.");
 			}
 		});
 		fetchDatabaseAndCleanDuplicatesUntilLastDay.addClickListener(e -> {
-			List<Budget> databaseLatestRecords = uploadRuleService.getLastDaysFromDatabase(budgetTempGrid);
-
-			LocalDate currentDatabaseLastDateMinus1 = databaseLatestRecords.get(databaseLatestRecords.size() - 1).getTransactionDate().minusDays(1);
-
-			//A mostani feltöltésből kiszedünk mindent ami az adatbázisban benne van, egy kis metszetett benne hagyva
-			processedBudget = processedBudget.stream().filter(b-> b.getTransactionDate().compareTo(currentDatabaseLastDateMinus1)>0).collect(Collectors.toList());
-			//Megjelenítésnek oda adjuk az utolsó pár napot a db-ből, hogy a tört napot jobban lehessen látni
-			databaseLatestRecords = databaseLatestRecords.stream().filter(b-> b.getTransactionDate().compareTo(currentDatabaseLastDateMinus1)>0).collect(Collectors.toList());
-			
-			
-			processedBudget.addAll(databaseLatestRecords);
-			Collections.sort(processedBudget);
-			budgetTempGrid.setItems(processedBudget);
-
-//			budgetTempGrid.setPartNameGenerator(budget -> conflict.contains(budget.getContentMd5()) ? "warn" : null);
-
+			// only for test
 		});
 
 		saveButton.addClickListener(e -> {
-			
-			List<Budget> onlyNew = processedBudget.stream().filter(b->b.getBudgetId() == null).toList();
-			
+
+			List<Budget> onlyNew = processedBudget.stream().filter(b -> b.getBudgetId() == null).toList();
+
 			budgetService.saveList(onlyNew);
 
 			saveButton.setEnabled(false);
@@ -272,6 +254,30 @@ public class UploadView extends VerticalLayout {
 
 		scrollToBottom();
 
+	}
+
+	private void mergeDbWithUpload() {
+		List<Budget> databaseLatestRecords = uploadRuleService.getLastDaysFromDatabase(budgetTempGrid);
+
+		LocalDate currentDatabaseLastDateMinus1 = databaseLatestRecords.get(databaseLatestRecords.size() - 1)
+				.getTransactionDate().minusDays(1);
+
+		// A mostani feltöltésből kiszedünk mindent ami az adatbázisban benne van, egy
+		// kis metszetett benne hagyva
+		processedBudget = processedBudget.stream()
+				.filter(b -> b.getTransactionDate().compareTo(currentDatabaseLastDateMinus1) > 0)
+				.collect(Collectors.toList());
+		// Megjelenítésnek oda adjuk az utolsó pár napot a db-ből, hogy a tört napot
+		// jobban lehessen látni
+		databaseLatestRecords = databaseLatestRecords.stream()
+				.filter(b -> b.getTransactionDate().compareTo(currentDatabaseLastDateMinus1) > 0)
+				.collect(Collectors.toList());
+
+		processedBudget.addAll(databaseLatestRecords);
+		Collections.sort(processedBudget);
+		budgetTempGrid.setItems(processedBudget);
+
+//			budgetTempGrid.setPartNameGenerator(budget -> conflict.contains(budget.getContentMd5()) ? "warn" : null);
 	}
 
 	/*
@@ -290,9 +296,9 @@ public class UploadView extends VerticalLayout {
 
 	// When you want to scroll:
 	private void scrollToBottom() {
-//		UI.getCurrent().getPage()
-//				.executeJs("setTimeout(function() {" + "var div = document.getElementById('scrollable-content');"
-//						+ "if(div) div.scrollTop = div.scrollHeight;" + "}, 100);");
+		UI.getCurrent().getPage()
+				.executeJs("setTimeout(function() {" + "var div = document.getElementById('scrollable-content');"
+						+ "if(div) div.scrollTop = div.scrollHeight;" + "}, 100);");
 	}
 
 }

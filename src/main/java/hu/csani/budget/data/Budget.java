@@ -60,7 +60,7 @@ public class Budget implements Comparable<Budget> {
 	@Column(name = "category_rule_id")
 	private Integer categoryRuleId;
 
-	@ManyToOne(fetch = FetchType.LAZY)
+	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "category_id")
 	private Category category;
 

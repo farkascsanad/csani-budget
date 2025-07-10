@@ -1,5 +1,8 @@
 package hu.csani.budget.views.category;
 
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 
 import org.vaadin.lineawesome.LineAwesomeIconUrl;
@@ -31,10 +34,11 @@ import com.vaadin.flow.spring.data.VaadinSpringDataHelpers;
 
 import hu.csani.budget.data.Category;
 import hu.csani.budget.repositories.CategoryRepository;
+import hu.csani.budget.services.CategoryTreeBuilder;
 
 @PageTitle("Categories")
 @Route("categories/:categoryId?/:action?(edit)")
-@Menu(order = 3, icon = LineAwesomeIconUrl.FOLDER_SOLID)
+@Menu(order = 2, icon = LineAwesomeIconUrl.FOLDER_SOLID)
 @Uses(Icon.class)
 public class CategoriesView extends Div implements BeforeEnterObserver {
 
@@ -63,6 +67,8 @@ public class CategoriesView extends Div implements BeforeEnterObserver {
 	public CategoriesView(CategoryRepository categoryRepository) {
 		this.categoryRepository = categoryRepository;
 		addClassNames("category-view");
+		
+	
 
 		// Create UI
 		SplitLayout splitLayout = new SplitLayout();
