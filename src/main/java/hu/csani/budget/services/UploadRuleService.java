@@ -140,7 +140,7 @@ public class UploadRuleService {
 
 				String amountStr = budget.get(rule.getSourceAmountColumn()).replaceAll(regexReplacer, "");
 
-				if (!decimalSeparator.equals(".")) {
+				if (decimalSeparator != null && !decimalSeparator.equals(".")) {
 					amountStr.replace(decimalSeparator, ".");
 				}
 
