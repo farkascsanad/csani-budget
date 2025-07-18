@@ -18,8 +18,12 @@ public class Budget implements Comparable<Budget> {
 	@Column(name = "budget_id")
 	private Integer budgetId;
 
-	@Column(name = "account_id")
-	private Integer accountId; // int2 maps to Short
+//	@Column(name = "account_id")
+//	private Integer accountId; // int2 maps to Short
+	
+	@ManyToOne(fetch = FetchType.EAGER)
+	@JoinColumn(name = "account_id")
+	private Account account;
 
 	@Column(name = "booking_date")
 	private LocalDate bookingDate;
@@ -80,13 +84,13 @@ public class Budget implements Comparable<Budget> {
 		this.budgetId = budgetId;
 	}
 
-	public Integer getAccountId() {
-		return accountId;
-	}
-
-	public void setAccountId(Integer accountId) {
-		this.accountId = accountId;
-	}
+//	public Integer getAccountId() {
+//		return accountId;
+//	}
+//
+//	public void setAccountId(Integer accountId) {
+//		this.accountId = accountId;
+//	}
 
 	public LocalDate getBookingDate() {
 		return bookingDate;
@@ -218,7 +222,7 @@ public class Budget implements Comparable<Budget> {
 
 	@Override
 	public String toString() {
-		return "Budget [budgetId=" + budgetId + ", accountId=" + accountId + ", bookingDate=" + bookingDate
+		return "Budget [budgetId=" + budgetId + ", account=" + account.getAccountName() + ", bookingDate=" + bookingDate
 				+ ", transactionDate=" + transactionDate + ", amount=" + amount + ", amountIn=" + amountIn
 				+ ", amountOut=" + amountOut + ", currency=" + currency + ", direction=" + direction + ", originalId="
 				+ originalId + ", otherPartyName=" + otherPartyName + ", otherPartyAccountNumber="
@@ -229,7 +233,7 @@ public class Budget implements Comparable<Budget> {
 
 	public String getContentMd5() {
 		// Concatenate relevant fields as a string (null-safe)
-		String data = String.valueOf(accountId) + "|" + String.valueOf(bookingDate) + "|"
+		String data = String.valueOf(account.getAccountId()) + "|" + String.valueOf(bookingDate) + "|"
 				+ String.valueOf(transactionDate) + "|" + String.valueOf(amount) + "|" + String.valueOf(amountIn) + "|"
 				+ String.valueOf(amountOut) + "|" + String.valueOf(currency) + "|" + String.valueOf(direction) + "|"
 				+ String.valueOf(originalId) + "|" + String.valueOf(otherPartyName) + "|"
@@ -254,6 +258,14 @@ public class Budget implements Comparable<Budget> {
 		// usually toString should not be used,
 		// instead one of the attributes or more in a comparator chain
 		return transactionDate.compareTo(o.getTransactionDate());
+	}
+
+	public Account getAccount() {
+		return account;
+	}
+
+	public void setAccount(Account account) {
+		this.account = account;
 	}
 
 

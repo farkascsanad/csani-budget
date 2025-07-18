@@ -3,6 +3,7 @@ package hu.csani.budget.services;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.notification.Notification;
 
+import hu.csani.budget.data.Account;
 import hu.csani.budget.data.Budget;
 import hu.csani.budget.data.UploadRule;
 import hu.csani.budget.repositories.UploadRuleRepository;
@@ -57,10 +59,12 @@ public class UploadRuleService {
 		List<Budget> allBudgets = budgetTempGrid.getListDataView().getItems().sorted().toList();
 
 		Budget firstbudget = allBudgets.get(0);
-		Budget lastbudget = allBudgets.get(allBudgets.size()-1);
+		Budget lastbudget = allBudgets.get(allBudgets.size() - 1);
 //		List<Budget> byAccountId = budService.findByAccountId(allBudgets.get(0).getAccountId());
-		List<Budget> byAccountId = budService.findByAccountIdAndTransactionDateBetween(allBudgets.get(0).getAccountId(),
-				firstbudget.getTransactionDate().minusDays(1), lastbudget.getTransactionDate()).stream().sorted().toList();
+		List<Budget> byAccountId = budService
+				.findByAccountIdAndTransactionDateBetween(allBudgets.get(0).getAccount(),
+						firstbudget.getTransactionDate().minusDays(1), lastbudget.getTransactionDate())
+				.stream().sorted().toList();
 
 //		Set<String> referenceHashes = byAccountId.stream().map(Budget::getContentMd5).collect(Collectors.toSet());
 
@@ -97,19 +101,31 @@ public class UploadRuleService {
 
 			System.out.println(budget);
 
-			if (rule.getDefaultAccount() != null)
-				row.setAccountId(rule.getDefaultAccount().getAccountId());
+			if (rule.getDefaultAccount() != null) {
+//				row.setAccountId(rule.getDefaultAccount().getAccountId());
+				row.setAccount(rule.getDefaultAccount());
+			}
 
 			if (rule.getSourceTransactiongDateColumn() != null && rule.getTransactionDateFormat() != null) {
-				DateTimeFormatter dtf = DateTimeFormatter.ofPattern(rule.getTransactionDateFormat());
-				LocalDate dt = LocalDate.parse(budget.get(rule.getSourceTransactiongDateColumn()), dtf);
-				row.setTransactionDate(dt);
+				try {
+					DateTimeFormatter dtf = DateTimeFormatter.ofPattern(rule.getTransactionDateFormat());
+					LocalDate dt = LocalDate.parse(budget.get(rule.getSourceTransactiongDateColumn()), dtf);
+					row.setTransactionDate(dt);
+				} catch (DateTimeParseException e) {
+					e.printStackTrace();
+					row.setTransactionDate(null);
+				}
 			}
 
 			if (rule.getSourceBookingDateColumn() != null && rule.getBookingDateFormat() != null) {
-				DateTimeFormatter dtf = DateTimeFormatter.ofPattern(rule.getBookingDateFormat());
-				LocalDate dt = LocalDate.parse(budget.get(rule.getSourceBookingDateColumn()), dtf);
-				row.setBookingDate(dt);
+				try {
+					DateTimeFormatter dtf = DateTimeFormatter.ofPattern(rule.getBookingDateFormat());
+					LocalDate dt = LocalDate.parse(budget.get(rule.getSourceBookingDateColumn()), dtf);
+					row.setBookingDate(dt);
+				} catch (DateTimeParseException e) {
+					e.printStackTrace();
+					row.setBookingDate(null);
+				}
 			}
 			String decimalSeparator = rule.getDecimalSeparator();
 			String regexReplacer = "[^\\-0-9" + decimalSeparator + "]";

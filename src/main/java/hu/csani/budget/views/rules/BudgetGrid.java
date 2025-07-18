@@ -3,6 +3,9 @@ package hu.csani.budget.views.rules;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.text.NumberFormat;
+import java.util.Collections;
+import java.util.Locale;
 
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.notification.Notification;
@@ -11,9 +14,13 @@ import hu.csani.budget.data.Budget;
 
 public class BudgetGrid extends Grid<Budget> {
 
-    public BudgetGrid() {
+    private CategoryRuleCreateView categoryRuleCreateView;
+
+	public BudgetGrid(CategoryRuleCreateView categoryRuleCreateView) {
         super(Budget.class);
+        this.categoryRuleCreateView = categoryRuleCreateView;
         setupGrid();
+        
         addDoubleClickListener();
     }
 
@@ -26,7 +33,7 @@ public class BudgetGrid extends Grid<Budget> {
                 .setSortable(true).setWidth("120px").setFlexGrow(0);
 
         // Account ID column
-        addColumn(Budget::getAccountId).setHeader("Account ID").setKey("accountId").setResizable(true)
+        addColumn(budget -> budget.getAccount().getAccountName()).setHeader("Account ID").setKey("accountId").setResizable(true)
                 .setSortable(true).setWidth("120px").setFlexGrow(0);
 
         // Booking Date column
@@ -39,11 +46,23 @@ public class BudgetGrid extends Grid<Budget> {
                 .setHeader("Transaction Date").setKey("transactionDate").setResizable(true).setSortable(true)
                 .setWidth("150px").setFlexGrow(0);
 
-        // Amount column
-        addColumn(budget -> budget.getAmount() != null ? budget.getAmount().toString() : "")
-                .setHeader("Amount").setKey("amount").setResizable(true).setSortable(true).setWidth("120px")
-                .setFlexGrow(0);
+//        // Amount column
+//        addColumn(budget -> budget.getAmount() != null ? budget.getAmount().toString() : "")
+//                .setHeader("Amount").setKey("amount").setResizable(true).setSortable(true).setWidth("120px")
+//                .setFlexGrow(0);
 
+     // Amount column
+        addColumn(budget -> {
+            if (budget.getAmount() != null) {
+                NumberFormat formatter = NumberFormat.getInstance(Locale.getDefault());
+                formatter.setMaximumFractionDigits(0); // No decimal places
+                return formatter.format(budget.getAmount());
+            }
+            return "";
+        })
+        .setHeader("Amount").setKey("amount").setResizable(true).setSortable(true).setWidth("120px")
+        .setFlexGrow(0);
+        
         // Currency column
         addColumn(Budget::getCurrency).setHeader("Currency").setKey("currency").setResizable(true)
                 .setSortable(true).setWidth("100px").setFlexGrow(0);
@@ -99,10 +118,11 @@ public class BudgetGrid extends Grid<Budget> {
             if (clickedColumn != null) {
                 String columnName = clickedColumn.getKey();
                 Object cellValue = getCellValue(clickedBudget, columnName);
-                handleBudgetGridDoubleClick(columnName, cellValue);
+                categoryRuleCreateView.handleBudgetGridDoubleClick(columnName, cellValue);
             }
         });
     }
+    
 
     // Helper method to get cell value based on column name
     private Object getCellValue(Budget budget, String columnName) {
@@ -127,8 +147,9 @@ public class BudgetGrid extends Grid<Budget> {
         }
     }
 
-    // Override this method in your view class or use a listener interface
-    protected void handleBudgetGridDoubleClick(String columnName, Object cellValue) {
-        Notification.show("Double-clicked on column: " + columnName + ", Value: " + cellValue);
-    }
+//    // Override this method in your view class or use a listener interface
+//    protected void handleBudgetGridDoubleClick(String columnName, Object cellValue) {
+////        Notification.show("Double-clicked on column: " + columnName + ", Value: " + cellValue);
+//    	  
+//    }
 }

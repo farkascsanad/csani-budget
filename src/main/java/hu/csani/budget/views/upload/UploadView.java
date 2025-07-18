@@ -198,7 +198,7 @@ public class UploadView extends VerticalLayout {
 			deleteButton.setEnabled(budget.getBudgetId() == null ? true : false);
 			return deleteButton;
 		}).setHeader("Actions").setAutoWidth(true).setResizable(true);
-		budgetTempGrid.addColumn(Budget::getAccountId).setHeader("Account ID").setSortable(true).setResizable(true);
+		budgetTempGrid.addColumn(budget -> budget.getAccount().getAccountName()).setHeader("Account ID").setSortable(true).setResizable(true);
 		budgetTempGrid.addColumn(Budget::getBookingDate).setHeader("Booking Date").setSortable(true).setResizable(true);
 		budgetTempGrid.addColumn(Budget::getTransactionDate).setHeader("Transaction Date").setSortable(true)
 				.setResizable(true);

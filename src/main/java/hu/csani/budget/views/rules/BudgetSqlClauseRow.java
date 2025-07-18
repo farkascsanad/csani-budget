@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import com.vaadin.flow.component.AbstractField.ComponentValueChangeEvent;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.html.NativeLabel;
@@ -88,14 +89,16 @@ public class BudgetSqlClauseRow extends HorizontalLayout {
 		typeLabel.getStyle().set("font-size", "smaller").set("color", "var(--lumo-secondary-text-color)");
 
 		removeBtn = new Button(new Icon("lumo", "cross"));
+		removeBtn.addThemeVariants(ButtonVariant.LUMO_ERROR);
 		removeBtn.addClickListener(e -> {
 			container.remove(this);
 			contidionRows.remove(this);
 		});
 
-		setFlexGrow(2, fieldBox);
-		setFlexGrow(1, opBox);
-		setFlexGrow(4, valueFieldHolder);
+		setFlexGrow(10, fieldBox);
+		setFlexGrow(5, opBox);
+		setFlexGrow(20, valueFieldHolder);
+		setFlexGrow(1, typeLabel);
 		setFlexGrow(1, removeBtn);
 
 		fieldBox.addValueChangeListener(e -> {

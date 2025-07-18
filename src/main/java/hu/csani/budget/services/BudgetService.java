@@ -10,6 +10,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import hu.csani.budget.data.Account;
 import hu.csani.budget.data.Budget;
 import hu.csani.budget.data.Category;
 import hu.csani.budget.repositories.BudgetRepository;
@@ -90,18 +91,18 @@ public class BudgetService {
 
 	}
 
-	public List<Budget> findByAccountId(Integer accountId) {
-		return budgetRepository.findByAccountId(accountId);
-	}
+//	public List<Budget> findByAccountId(Integer accountId) {
+//		return budgetRepository.findByAccountId(accountId);
+//	}
+//
+//	public List<Budget> findByAccountIdAndBookingDateBetween(Integer accountId, LocalDate startDate,
+//			LocalDate endDate) {
+//		return budgetRepository.findByAccountIdAndBookingDateBetween(accountId, startDate, endDate);
+//	}
 
-	public List<Budget> findByAccountIdAndBookingDateBetween(Integer accountId, LocalDate startDate,
+	public List<Budget> findByAccountIdAndTransactionDateBetween(Account account, LocalDate startDate,
 			LocalDate endDate) {
-		return budgetRepository.findByAccountIdAndBookingDateBetween(accountId, startDate, endDate);
-	}
-
-	public List<Budget> findByAccountIdAndTransactionDateBetween(Integer accountId, LocalDate startDate,
-			LocalDate endDate) {
-		return budgetRepository.findByAccountIdAndTransactionDateBetween(accountId, startDate, endDate);
+		return budgetRepository.findByAccountAndTransactionDateBetween(account, startDate, endDate);
 	}
 
 	/**
@@ -115,7 +116,18 @@ public class BudgetService {
 	        
 	        // Map all Budget fields
 	        budget.setBudgetId(rs.getObject("budget_id", Integer.class));
-	        budget.setAccountId(rs.getObject("account_id", Integer.class));
+	        // Handle Category relationship (if joined in SQL)
+	        try {
+	            Integer accountId = rs.getObject("account_id", Integer.class);
+	            if (accountId != null) {
+	                Account account= new Account();
+	                account.setAccountId(accountId);
+	                budget.setAccount(account);
+	            }
+	        } catch (SQLException e) {
+	            // Category columns not present in result set, skip
+	        }
+//	        budget.setAccount(rs.getObject("account_id", Integer.class));
 	        
 	        // Handle LocalDate fields
 	        if (rs.getDate("booking_date") != null) {

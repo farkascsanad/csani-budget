@@ -11,6 +11,7 @@ import java.util.Map;
 import org.vaadin.lineawesome.LineAwesomeIconUrl;
 
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dependency.Uses;
 import com.vaadin.flow.component.grid.Grid;
@@ -23,6 +24,8 @@ import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.TextArea;
+import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Menu;
@@ -48,6 +51,9 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 
 	private ComboBox<String> matchType;
 
+	private TextField ruleName = new TextField();
+	private TextField ruleDescription = new TextField();
+
 	private BudgetService budgetService;
 	private CategoryService categoryService;
 
@@ -62,8 +68,9 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 	private final Map<String, Class<?>> budgetFields;
 	private List<BudgetSqlClauseRow> conditionRows = new ArrayList<>();
 
+//	Grid<Budget> budgetGrid = new Grid<>(Budget.class);
 
-	Grid<Budget> budgetGrid = new Grid<>(Budget.class);
+	private BudgetGrid gridBudget;
 
 	private BudgetRuleRepository budgetRuleRepository;
 
@@ -80,7 +87,14 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 		} else {
 
 			gridHeader.setText(HEADER_CATEGORY_EXAMPLE);
+			ruleName.setValue(budgetRuleEntity.getBudgetRuleName());
+			ruleDescription.setValue(budgetRuleEntity.getDescription());
 		}
+		//rule name and description update the entity.
+		ruleName.addValueChangeListener(e-> budgetRuleEntity.setBudgetRuleName(ruleName.getValue()));
+		ruleDescription.addValueChangeListener(e-> budgetRuleEntity.setDescription(ruleDescription.getValue()));
+		
+		gridBudget = new BudgetGrid(this);
 
 		// Use reflection to get fields/types
 		this.budgetFields = getFieldsAndTypes(Budget.class);
@@ -93,10 +107,10 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 		matchTypeLayout.add(new NativeLabel("If"));
 
 		matchType = new ComboBox<>();
-		matchType.setItems("all", "any");
+		matchType.setItems("all", "any (depreceted)");
 		matchType.setValue("all");
 		matchTypeLayout.add(matchType, new NativeLabel("of these conditions match:"));
-
+		add(new NativeLabel("Rule name: "), ruleName, new NativeLabel("Rule description: "), ruleDescription);
 		add(matchTypeLayout);
 		conditionsLayout.setPadding(false);
 		conditionsLayout.setSpacing(false);
@@ -107,6 +121,7 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 //		addConditionRow(conditionsLayout);
 
 		Button addCondition = new Button("+ Add Condition", new Icon("lumo", "plus"));
+		addCondition.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 		addCondition.addClickListener(e -> addConditionRow(conditionsLayout));
 		add(addCondition);
 
@@ -119,6 +134,7 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 //		addActionRow(setsLayout);
 
 		Button addSet = new Button("+ Add SET", new Icon("lumo", "plus"));
+		addSet.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 		addSet.addClickListener(e -> addActionRow(setsLayout));
 		add(addSet);
 
@@ -131,37 +147,38 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 
 		// Option 2: Remove auto-generated column and add custom one
 
-		setupGrid();
-		budgetGrid.setItems(Collections.emptyList()); // TODO: Bind to filtered results
-		budgetGrid.setHeight("250px");
+//		setupGrid();
+//		budgetGrid.setItems(Collections.emptyList()); // TODO: Bind to filtered results
+//		budgetGrid.setHeight("250px");
 
 		// Add double-click listener to the grid
-		budgetGrid.addItemDoubleClickListener(event -> {
-			Budget clickedBudget = event.getItem();
-
-			// Get the column that was clicked
-			Grid.Column<Budget> clickedColumn = event.getColumn();
-
-			if (clickedColumn != null) {
-				// Get the column name (key)
-				String columnName = clickedColumn.getKey();
-
-				// Get the cell value using reflection or property access
-				Object cellValue = getCellValue(clickedBudget, columnName);
-
-				// Handle the double-click event
-//				System.out.println("Double-clicked on column: " + columnName);
-//				System.out.println("Cell value: " + cellValue);
-
-				// You can also show a notification or perform other actions
-//				Notification.show("Clicked column: " + columnName + ", Value: " + cellValue);
-
-				handleBudgetGridDoubleClick(columnName, cellValue);
-			}
-		});
+//		budgetGrid.addItemDoubleClickListener(event -> {
+//			Budget clickedBudget = event.getItem();
+//
+//			// Get the column that was clicked
+//			Grid.Column<Budget> clickedColumn = event.getColumn();
+//
+//			if (clickedColumn != null) {
+//				// Get the column name (key)
+//				String columnName = clickedColumn.getKey();
+//
+//				// Get the cell value using reflection or property access
+//				Object cellValue = getCellValue(clickedBudget, columnName);
+//
+//				// Handle the double-click event
+////				System.out.println("Double-clicked on column: " + columnName);
+////				System.out.println("Cell value: " + cellValue);
+//
+//				// You can also show a notification or perform other actions
+////				Notification.show("Clicked column: " + columnName + ", Value: " + cellValue);
+//
+//				handleBudgetGridDoubleClick(columnName, cellValue);
+//			}
+//		});
 
 		add(gridHeader);
-		add(budgetGrid);
+//		add(budgetGrid);
+		add(gridBudget);
 
 		// Save/Cancel Buttons
 		HorizontalLayout buttons = new HorizontalLayout();
@@ -193,7 +210,7 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 		List<Budget> top10ByCategoryIsNullOrderByAmountDesc = budgetService
 				.findTop10ByCategoryIsNullOrderByAmountDesc();
 
-		budgetGrid.setItems(top10ByCategoryIsNullOrderByAmountDesc);
+		gridBudget.setItems(top10ByCategoryIsNullOrderByAmountDesc);
 		gridHeader.setText(HEADER_EMPTY_EXAMPLE);
 	}
 
@@ -210,7 +227,7 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 
 			List<Budget> executeSelectQuery = budgetService.executeSelectQuery(fullSQL.toString());
 
-			budgetGrid.setItems(executeSelectQuery);
+			gridBudget.setItems(executeSelectQuery);
 
 			gridHeader.setText(HEADER_CATEGORY_EXAMPLE);
 
@@ -229,7 +246,7 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 			System.out.println(fullSQL);
 
 			List<Budget> budgetRuleData = budgetService.executeSelectQuery(fullSQL.toString());
-			budgetGrid.setItems(budgetRuleData);
+			gridBudget.setItems(budgetRuleData);
 
 		} catch (Exception e) {
 			Notification notification = Notification.show(
@@ -348,112 +365,112 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 		container.add(row);
 	}
 
-	private void setupGrid() {
-		// Remove default columns if any
-		budgetGrid.removeAllColumns();
-
-		// Budget ID column
-		budgetGrid.addColumn(Budget::getBudgetId).setHeader("Budget ID").setKey("budgetId").setResizable(true)
-				.setSortable(true).setWidth("120px").setFlexGrow(0);
-
-		// Account ID column
-		budgetGrid.addColumn(Budget::getAccountId).setHeader("Account ID").setKey("accountId").setResizable(true)
-				.setSortable(true).setWidth("120px").setFlexGrow(0);
-
-		// Booking Date column
-		budgetGrid.addColumn(budget -> budget.getBookingDate() != null ? budget.getBookingDate().toString() : "")
-				.setHeader("Booking Date").setKey("bookingDate").setResizable(true).setSortable(true).setWidth("40px")
-				.setFlexGrow(0);
-
-		// Transaction Date column
-		budgetGrid
-				.addColumn(budget -> budget.getTransactionDate() != null ? budget.getTransactionDate().toString() : "")
-				.setHeader("Transaction Date").setKey("transactionDate").setResizable(true).setSortable(true)
-				.setWidth("150px").setFlexGrow(0);
-
-		// Amount column
-		budgetGrid.addColumn(budget -> budget.getAmount() != null ? budget.getAmount().toString() : "")
-				.setHeader("Amount").setKey("amount").setResizable(true).setSortable(true).setWidth("120px")
-				.setFlexGrow(0);
-
-//	        // Amount In column
-//	        addColumn(budget -> budget.getAmountIn() != null ? 
-//	                  budget.getAmountIn().toString() : "")
-//	            .setHeader("Amount In")
-//	            .setKey("amountIn")
-//	            .setResizable(true)
-//	            .setSortable(true)
-//	            .setWidth("120px")
-//	            .setFlexGrow(0);
-//	        
-//	        // Amount Out column
-//	        addColumn(budget -> budget.getAmountOut() != null ? 
-//	                  budget.getAmountOut().toString() : "")
-//	            .setHeader("Amount Out")
-//	            .setKey("amountOut")
-//	            .setResizable(true)
-//	            .setSortable(true)
-//	            .setWidth("120px")
-//	            .setFlexGrow(0);
-//	        
-		// Currency column
-		budgetGrid.addColumn(Budget::getCurrency).setHeader("Currency").setKey("currency").setResizable(true)
-				.setSortable(true).setWidth("100px").setFlexGrow(0);
-
-//	        // Direction column
-//	        budgetGrid.addColumn(Budget::getDirection)
-//	            .setHeader("Direction")
-//	            .setKey("direction")
-//	            .setResizable(true)
-//	            .setSortable(true)
-//	            .setWidth("100px")
-//	            .setFlexGrow(0);
-//	        
-		// Original ID column
-		budgetGrid.addColumn(Budget::getOriginalId).setHeader("Original ID").setKey("originalId").setResizable(true)
-				.setSortable(true).setWidth("150px").setFlexGrow(0);
-
-		// Other Party Name column
-		budgetGrid.addColumn(Budget::getOtherPartyName).setHeader("Other Party Name").setKey("otherPartyName")
-				.setResizable(true).setSortable(true).setWidth("200px").setFlexGrow(1);
-
-		// Other Party Account Number column
-		budgetGrid.addColumn(Budget::getOtherPartyAccountNumber).setHeader("Other Party Account")
-				.setKey("otherPartyAccountNumber").setResizable(true).setSortable(true).setWidth("180px")
-				.setFlexGrow(0);
-
-		// Transaction Type column
-		budgetGrid.addColumn(Budget::getTransactionType).setHeader("Transaction Type").setKey("transactionType")
-				.setResizable(true).setSortable(true).setWidth("150px").setFlexGrow(0);
-
-		// Note column
-		budgetGrid.addColumn(Budget::getNote).setHeader("Note").setKey("note").setResizable(true).setSortable(true)
-				.setWidth("200px").setFlexGrow(1);
-
-		// Category Rule ID column
-		budgetGrid.addColumn(Budget::getCategoryRuleId).setHeader("Category Rule ID").setKey("categoryRuleId")
-				.setResizable(true).setSortable(true).setWidth("140px").setFlexGrow(0);
-
-		// Category column (assuming Category has a name or description method)
-		budgetGrid.addColumn(budget -> budget.getCategory() != null ? budget.getCategory().getCategoryName() : "")
-				.setHeader("Category").setKey("category").setResizable(true).setSortable(true).setWidth("150px")
-				.setFlexGrow(0);
-
-		// Manual Category ID column
-		budgetGrid.addColumn(Budget::getManualCategoryId).setHeader("Manual Category ID").setKey("manualCategoryId")
-				.setResizable(true).setSortable(true).setWidth("150px").setFlexGrow(0);
-
-		// Transfer ID column
-		budgetGrid.addColumn(Budget::getTransferId).setHeader("Transfer ID").setKey("transferId").setResizable(true)
-				.setSortable(true).setWidth("120px").setFlexGrow(0);
-
-		// Grid configuration
-//		budgetGrid.setSelectionMode(SelectionMode.SINGLE);
-
-		budgetGrid.setMultiSort(true);
-
-//		budgetGrid.setColumnReorderingAllowed(true);
-	}
+//	private void setupGrid() {
+//		// Remove default columns if any
+//		budgetGrid.removeAllColumns();
+//
+//		// Budget ID column
+//		budgetGrid.addColumn(Budget::getBudgetId).setHeader("Budget ID").setKey("budgetId").setResizable(true)
+//				.setSortable(true).setWidth("120px").setFlexGrow(0);
+//
+//		// Account ID column
+//		budgetGrid.addColumn(Budget::getAccountId).setHeader("Account ID").setKey("accountId").setResizable(true)
+//				.setSortable(true).setWidth("120px").setFlexGrow(0);
+//
+//		// Booking Date column
+//		budgetGrid.addColumn(budget -> budget.getBookingDate() != null ? budget.getBookingDate().toString() : "")
+//				.setHeader("Booking Date").setKey("bookingDate").setResizable(true).setSortable(true).setWidth("40px")
+//				.setFlexGrow(0);
+//
+//		// Transaction Date column
+//		budgetGrid
+//				.addColumn(budget -> budget.getTransactionDate() != null ? budget.getTransactionDate().toString() : "")
+//				.setHeader("Transaction Date").setKey("transactionDate").setResizable(true).setSortable(true)
+//				.setWidth("150px").setFlexGrow(0);
+//
+//		// Amount column
+//		budgetGrid.addColumn(budget -> budget.getAmount() != null ? budget.getAmount().toString() : "")
+//				.setHeader("Amount").setKey("amount").setResizable(true).setSortable(true).setWidth("120px")
+//				.setFlexGrow(0);
+//
+////	        // Amount In column
+////	        addColumn(budget -> budget.getAmountIn() != null ? 
+////	                  budget.getAmountIn().toString() : "")
+////	            .setHeader("Amount In")
+////	            .setKey("amountIn")
+////	            .setResizable(true)
+////	            .setSortable(true)
+////	            .setWidth("120px")
+////	            .setFlexGrow(0);
+////	        
+////	        // Amount Out column
+////	        addColumn(budget -> budget.getAmountOut() != null ? 
+////	                  budget.getAmountOut().toString() : "")
+////	            .setHeader("Amount Out")
+////	            .setKey("amountOut")
+////	            .setResizable(true)
+////	            .setSortable(true)
+////	            .setWidth("120px")
+////	            .setFlexGrow(0);
+////	        
+//		// Currency column
+//		budgetGrid.addColumn(Budget::getCurrency).setHeader("Currency").setKey("currency").setResizable(true)
+//				.setSortable(true).setWidth("100px").setFlexGrow(0);
+//
+////	        // Direction column
+////	        budgetGrid.addColumn(Budget::getDirection)
+////	            .setHeader("Direction")
+////	            .setKey("direction")
+////	            .setResizable(true)
+////	            .setSortable(true)
+////	            .setWidth("100px")
+////	            .setFlexGrow(0);
+////	        
+//		// Original ID column
+//		budgetGrid.addColumn(Budget::getOriginalId).setHeader("Original ID").setKey("originalId").setResizable(true)
+//				.setSortable(true).setWidth("150px").setFlexGrow(0);
+//
+//		// Other Party Name column
+//		budgetGrid.addColumn(Budget::getOtherPartyName).setHeader("Other Party Name").setKey("otherPartyName")
+//				.setResizable(true).setSortable(true).setWidth("200px").setFlexGrow(1);
+//
+//		// Other Party Account Number column
+//		budgetGrid.addColumn(Budget::getOtherPartyAccountNumber).setHeader("Other Party Account")
+//				.setKey("otherPartyAccountNumber").setResizable(true).setSortable(true).setWidth("180px")
+//				.setFlexGrow(0);
+//
+//		// Transaction Type column
+//		budgetGrid.addColumn(Budget::getTransactionType).setHeader("Transaction Type").setKey("transactionType")
+//				.setResizable(true).setSortable(true).setWidth("150px").setFlexGrow(0);
+//
+//		// Note column
+//		budgetGrid.addColumn(Budget::getNote).setHeader("Note").setKey("note").setResizable(true).setSortable(true)
+//				.setWidth("200px").setFlexGrow(1);
+//
+//		// Category Rule ID column
+//		budgetGrid.addColumn(Budget::getCategoryRuleId).setHeader("Category Rule ID").setKey("categoryRuleId")
+//				.setResizable(true).setSortable(true).setWidth("140px").setFlexGrow(0);
+//
+//		// Category column (assuming Category has a name or description method)
+//		budgetGrid.addColumn(budget -> budget.getCategory() != null ? budget.getCategory().getCategoryName() : "")
+//				.setHeader("Category").setKey("category").setResizable(true).setSortable(true).setWidth("150px")
+//				.setFlexGrow(0);
+//
+//		// Manual Category ID column
+//		budgetGrid.addColumn(Budget::getManualCategoryId).setHeader("Manual Category ID").setKey("manualCategoryId")
+//				.setResizable(true).setSortable(true).setWidth("150px").setFlexGrow(0);
+//
+//		// Transfer ID column
+//		budgetGrid.addColumn(Budget::getTransferId).setHeader("Transfer ID").setKey("transferId").setResizable(true)
+//				.setSortable(true).setWidth("120px").setFlexGrow(0);
+//
+//		// Grid configuration
+////		budgetGrid.setSelectionMode(SelectionMode.SINGLE);
+//
+//		budgetGrid.setMultiSort(true);
+//
+////		budgetGrid.setColumnReorderingAllowed(true);
+//	}
 
 	// Helper method to get cell value based on column name
 	private Object getCellValue(Budget budget, String columnName) {
@@ -478,7 +495,7 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 		}
 	}
 
-	private void handleBudgetGridDoubleClick(String columnName, Object cellValue) {
+	public void handleBudgetGridDoubleClick(String columnName, Object cellValue) {
 
 		BudgetSqlClauseRow conditionRow = addConditionRow(conditionsLayout);
 		conditionRow.setDoubleClickedItems(columnName, cellValue);
