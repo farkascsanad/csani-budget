@@ -17,6 +17,7 @@ import com.vaadin.flow.component.dependency.Uses;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.Hr;
 import com.vaadin.flow.component.html.NativeLabel;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.notification.Notification;
@@ -100,18 +101,26 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 		this.budgetFields = getFieldsAndTypes(Budget.class);
 
 		add(new H2("Create Rule"));
+		
+		
+		// Row 1: Rule name and description with labels
+		HorizontalLayout ruleInfoRow = new HorizontalLayout();
+		ruleInfoRow.setAlignItems(Alignment.BASELINE);
+		ruleInfoRow.add(new NativeLabel("Rule name: "), ruleName, 
+		               new NativeLabel("Rule description: "), ruleDescription);
+		add(ruleInfoRow);
 
 		// Top: "If all/any of these conditions match:"
 		HorizontalLayout matchTypeLayout = new HorizontalLayout();
 		matchTypeLayout.setAlignItems(Alignment.BASELINE);
 		matchTypeLayout.add(new NativeLabel("If"));
-
 		matchType = new ComboBox<>();
 		matchType.setItems("all", "any (depreceted)");
 		matchType.setValue("all");
 		matchTypeLayout.add(matchType, new NativeLabel("of these conditions match:"));
-		add(new NativeLabel("Rule name: "), ruleName, new NativeLabel("Rule description: "), ruleDescription);
 		add(matchTypeLayout);
+		
+		
 		conditionsLayout.setPadding(false);
 		conditionsLayout.setSpacing(false);
 		conditionsLayout.setWidthFull();
@@ -125,6 +134,7 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 		addCondition.addClickListener(e -> addConditionRow(conditionsLayout));
 		add(addCondition);
 
+		add(new Hr()); // Adds a horizontal line separator
 		// SET Section
 		add(new NativeLabel("SET the following:"));
 		setsLayout.setPadding(false);
@@ -141,43 +151,9 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 		// Budgets Preview Grid
 		add(new H2("Matching Budgets Preview"));
 
-//		budgetGrid.addColumn(Budget::getBudgetId).setHeader("ID");
-//		budgetGrid.addColumn(Budget::getAmount).setHeader("Amount");
-//		budgetGrid.addColumn(Budget::getCurrency).setHeader("Currency");
 
-		// Option 2: Remove auto-generated column and add custom one
-
-//		setupGrid();
-//		budgetGrid.setItems(Collections.emptyList()); // TODO: Bind to filtered results
-//		budgetGrid.setHeight("250px");
-
-		// Add double-click listener to the grid
-//		budgetGrid.addItemDoubleClickListener(event -> {
-//			Budget clickedBudget = event.getItem();
-//
-//			// Get the column that was clicked
-//			Grid.Column<Budget> clickedColumn = event.getColumn();
-//
-//			if (clickedColumn != null) {
-//				// Get the column name (key)
-//				String columnName = clickedColumn.getKey();
-//
-//				// Get the cell value using reflection or property access
-//				Object cellValue = getCellValue(clickedBudget, columnName);
-//
-//				// Handle the double-click event
-////				System.out.println("Double-clicked on column: " + columnName);
-////				System.out.println("Cell value: " + cellValue);
-//
-//				// You can also show a notification or perform other actions
-////				Notification.show("Clicked column: " + columnName + ", Value: " + cellValue);
-//
-//				handleBudgetGridDoubleClick(columnName, cellValue);
-//			}
-//		});
 
 		add(gridHeader);
-//		add(budgetGrid);
 		add(gridBudget);
 
 		// Save/Cancel Buttons
