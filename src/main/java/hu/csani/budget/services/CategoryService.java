@@ -3,9 +3,11 @@ package hu.csani.budget.services;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
+import hu.csani.budget.data.Account;
 import hu.csani.budget.data.Category;
 import hu.csani.budget.repositories.CategoryRepository;
 
@@ -49,5 +51,6 @@ public class CategoryService {
 	public void save(Category category) {
 		categoryRepository.save(category);
 	}
+
 
 }

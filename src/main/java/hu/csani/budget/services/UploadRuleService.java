@@ -128,9 +128,14 @@ public class UploadRuleService {
 				}
 			}
 			String decimalSeparator = rule.getDecimalSeparator();
-			String regexReplacer = "[^\\-0-9" + decimalSeparator + "]";
+			String regexReplacer = "[^\\.\\-0-9" + decimalSeparator + "]";
 
 			if (rule.getAmountSplitted()) {
+				
+//				if (decimalSeparator != null && !decimalSeparator.equals(".")) {
+//					amountStr.replace(decimalSeparator, ".");
+//				}
+				
 				String inStr = budget.get(rule.getSourceAmountInColumn()).replaceAll(regexReplacer, "");
 				String outStr = budget.get(rule.getSourceAmountOutColumn()).replaceAll(regexReplacer, "");
 
@@ -140,6 +145,12 @@ public class UploadRuleService {
 				}
 				BigDecimal amountIn = toBigDecimal(inStr);
 				BigDecimal amountOut = toBigDecimal(outStr);
+				
+				
+				if(rule.getInvertAmountOutColumn()) {
+					amountOut = amountOut.multiply(new BigDecimal(-1));
+				}
+				
 				BigDecimal amount = amountIn.add(amountOut);
 
 				row.setAmount(amount);

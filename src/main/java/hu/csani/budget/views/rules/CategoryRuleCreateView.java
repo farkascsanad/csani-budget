@@ -3,10 +3,10 @@ package hu.csani.budget.views.rules;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.vaadin.lineawesome.LineAwesomeIconUrl;
 
@@ -14,7 +14,6 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dependency.Uses;
-import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Hr;
@@ -22,10 +21,10 @@ import com.vaadin.flow.component.html.NativeLabel;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
+import com.vaadin.flow.component.notification.Notification.Position;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
@@ -33,18 +32,28 @@ import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
+import hu.csani.budget.data.Account;
 import hu.csani.budget.data.Budget;
 import hu.csani.budget.data.BudgetRuleEntity;
 import hu.csani.budget.data.BudgetSqlClauseEntity;
 import hu.csani.budget.repositories.BudgetRuleRepository;
 import hu.csani.budget.services.BudgetService;
 import hu.csani.budget.services.CategoryService;
+import hu.csani.budget.views.accounts.AccountsView;
 
 @PageTitle("Create rule")
+//@Route("category-rule-create/:categoryRuleId/:action?(edit)")
 @Route("category-rule-create")
 @Menu(order = 15, icon = LineAwesomeIconUrl.RULER_COMBINED_SOLID)
 @Uses(Icon.class)
 public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
+
+//	@Route("accounts/:accountId?/:action?(edit)")
+//	@Menu(order = 1, icon = LineAwesomeIconUrl.COLUMNS_SOLID)
+//	@Uses(Icon.class)
+
+	private final String CATEGORY_RULE_ID = "categoryRuleId";
+	private final String EDIT_ROUTE_TEMPLATE = "category-rule-create/%s/edit";
 
 	private final String HEADER_EMPTY_EXAMPLE = "Uncategorized example rows. HINT: Double click cell create condition!";
 	private final String HEADER_CATEGORY_EXAMPLE = "Budget history filtered by rule";
@@ -91,23 +100,22 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 			ruleName.setValue(budgetRuleEntity.getBudgetRuleName());
 			ruleDescription.setValue(budgetRuleEntity.getDescription());
 		}
-		//rule name and description update the entity.
-		ruleName.addValueChangeListener(e-> budgetRuleEntity.setBudgetRuleName(ruleName.getValue()));
-		ruleDescription.addValueChangeListener(e-> budgetRuleEntity.setDescription(ruleDescription.getValue()));
-		
+		// rule name and description update the entity.
+		ruleName.addValueChangeListener(e -> budgetRuleEntity.setBudgetRuleName(ruleName.getValue()));
+		ruleDescription.addValueChangeListener(e -> budgetRuleEntity.setDescription(ruleDescription.getValue()));
+
 		gridBudget = new BudgetGrid(this);
 
 		// Use reflection to get fields/types
 		this.budgetFields = getFieldsAndTypes(Budget.class);
 
 		add(new H2("Create Rule"));
-		
-		
+
 		// Row 1: Rule name and description with labels
 		HorizontalLayout ruleInfoRow = new HorizontalLayout();
 		ruleInfoRow.setAlignItems(Alignment.BASELINE);
-		ruleInfoRow.add(new NativeLabel("Rule name: "), ruleName, 
-		               new NativeLabel("Rule description: "), ruleDescription);
+		ruleInfoRow.add(new NativeLabel("Rule name: "), ruleName, new NativeLabel("Rule description: "),
+				ruleDescription);
 		add(ruleInfoRow);
 
 		// Top: "If all/any of these conditions match:"
@@ -119,8 +127,7 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 		matchType.setValue("all");
 		matchTypeLayout.add(matchType, new NativeLabel("of these conditions match:"));
 		add(matchTypeLayout);
-		
-		
+
 		conditionsLayout.setPadding(false);
 		conditionsLayout.setSpacing(false);
 		conditionsLayout.setWidthFull();
@@ -151,8 +158,6 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 		// Budgets Preview Grid
 		add(new H2("Matching Budgets Preview"));
 
-
-
 		add(gridHeader);
 		add(gridBudget);
 
@@ -160,21 +165,22 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 		HorizontalLayout buttons = new HorizontalLayout();
 		Button save = new Button("Save", new Icon("lumo", "checkmark"), e -> save());
 		Button test = new Button("Test", new Icon("lumo", "checkmark"), e -> test());
-		Button reset = new Button("Reset", new Icon("lumo", "cross"), e -> reset());
+		Button reset = new Button("Reset", new Icon("lumo", "cross"), e -> reset(true));
 		buttons.add(save, test, reset);
 		add(buttons);
 
-		reset();
+		reset(false);
 	}
 
 	private void resetBudgetEntity() {
 		budgetRuleEntity = new BudgetRuleEntity();
-		budgetRuleEntity.setConditions(new ArrayList<>());
+		budgetRuleEntity.setClauses(new ArrayList<>());
 	}
 
-	private void reset() {
+	private void reset(boolean fullReset) {
 
-		resetBudgetEntity();
+		if (fullReset)
+			resetBudgetEntity();
 
 		conditionRows.clear();
 		conditionsLayout.removeAll();
@@ -182,6 +188,15 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 
 		addConditionRow(conditionsLayout);
 		addActionRow(setsLayout);
+
+		if (!fullReset) {
+			budgetRuleEntity.getConditions().forEach(e -> {
+				addConditionRow(conditionsLayout, e);
+			});
+			budgetRuleEntity.getActions().forEach(e -> {
+				addActionRow(setsLayout, e);
+			});
+		}
 
 		List<Budget> top10ByCategoryIsNullOrderByAmountDesc = budgetService
 				.findTop10ByCategoryIsNullOrderByAmountDesc();
@@ -236,13 +251,25 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 	private Object save() {
 		String fullSQL = generateUpdateSQL();
 
+//		xxxx
+
 		budgetRuleEntity.setBudgetRuleSQL(fullSQL);
-		budgetRuleEntity.setWhereClause(generateUpdateSQL());
+		String matchtypeValue = matchType.getValue().equals("all") ? " AND " : " OR ";
+		budgetRuleEntity.setWhereClause(generateWhereClause(matchtypeValue, new StringBuilder(), false));
 		budgetRuleEntity.setSetClause(generateSETClause());
 
 		budgetRuleRepository.save(budgetRuleEntity);
 
-		reset();
+		int executeUpdateQueryTest = budgetService.executeUpdateQuery(fullSQL);
+		if (executeUpdateQueryTest > 0) {
+			Notification notification = Notification.show("Update SQL success!");
+			notification.addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+		} else {
+			Notification notification = Notification.show("Update SQL failed!");
+			notification.addThemeVariants(NotificationVariant.LUMO_ERROR);
+		}
+
+		reset(true);
 		return fullSQL;
 	}
 
@@ -273,24 +300,31 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 			budgetConditionRow.setBudgetConditionEntityClass(order);
 
 			order++;
+
+			// TODO FIX THIS
+//			Integer budgetRuleId = budgetRuleEntity.getBudgetRuleId();
+//			setSQL.append("category_rule_id = " + budgetRuleId);
+
 			if (budgetCondition.getClauseType().equals("SET")) {
 				setSQL.append("\n");
 				setSQL.append(budgetConditionRow.toSQL() + ",");
 			}
 
-			budgetRuleEntity.getConditions().add(budgetConditionRow.getBudgetCondition());
+			budgetRuleEntity.getClauses().add(budgetConditionRow.getBudgetCondition());
 		}
 
 		// Levágjuk a végéről a ","-t mert oda már nem kell
-		String finalSET = setSQL.toString().replaceAll(",$", "");
+		String finalSET = setSQL.toString().replaceAll(",$", ""); // erre már nincs szükség, de maradhat
 		return finalSET;
 	}
 
-	private void generateWhereClause(String matchtypeValue, StringBuilder fullSQL, boolean test) {
-		fullSQL.append("\n");
-		fullSQL.append(" WHERE ");
-		fullSQL.append("\n");
-		fullSQL.append(" 1 = 1");
+	private String generateWhereClause(String matchtypeValue, StringBuilder fullSQL, boolean test) {
+		StringBuilder whereSB = new StringBuilder();
+
+		whereSB.append("\n");
+		whereSB.append(" WHERE ");
+		whereSB.append("\n");
+		whereSB.append(" 1 = 1");
 
 		int order = 0;
 
@@ -299,20 +333,36 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 
 //			System.out.println(budgetConditionRow.toSQL());
 			budgetConditionRow.setBudgetConditionEntityClass(order);
-
 			if (budgetCondition.getClauseType().equals("WHERE")) {
-				fullSQL.append("\n");
-				fullSQL.append(matchtypeValue + budgetConditionRow.toSQL());
+				whereSB.append("\n");
+				whereSB.append(matchtypeValue + budgetConditionRow.toSQL());
 			}
 			order++;
 			if (!test)
-				budgetRuleEntity.getConditions().add(budgetConditionRow.getBudgetCondition());
+				budgetRuleEntity.getClauses().add(budgetConditionRow.getBudgetCondition());
 		}
+
+		fullSQL.append(whereSB);
+
+		return whereSB.toString();
 	}
 
 	@Override
 	public void beforeEnter(BeforeEnterEvent event) {
-		// TODOD update budgetRuleEntity
+//		Optional<Integer> categoryRuleId = event.getRouteParameters().get(CATEGORY_RULE_ID).map(Integer::parseInt);
+//		if (categoryRuleId.isPresent()) {
+//			Optional<BudgetRuleEntity> ruleFromBackEnd = budgetRuleRepository.findById(categoryRuleId.get());
+//			if (ruleFromBackEnd.isPresent()) {
+////				populateForm(accountFromBackend.get());
+//				this.budgetRuleEntity=ruleFromBackEnd.get();
+//				reset(false);
+//			} else {
+//				Notification.show(String.format("Account not found. ID = %s", categoryRuleId.get()), 3000,
+//						Position.BOTTOM_START);
+////				refreshGrid();
+//				event.forwardTo(AccountsView.class);
+//			}
+//		}
 	}
 
 	private Map<String, Class<?>> getFieldsAndTypes(Class<?> clazz) {
@@ -325,7 +375,11 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 	}
 
 	private BudgetSqlClauseRow addConditionRow(VerticalLayout container) {
-		BudgetSqlClauseRow rowx = new BudgetSqlClauseRow(budgetFields, container, "WHERE", conditionRows, null,
+		return addConditionRow(container, null);
+	}
+
+	private BudgetSqlClauseRow addConditionRow(VerticalLayout container, BudgetSqlClauseEntity bc) {
+		BudgetSqlClauseRow rowx = new BudgetSqlClauseRow(budgetFields, container, "WHERE", conditionRows, bc,
 				categoryService.findAllAndBuildTree(), categoryService);
 
 		container.add(rowx);
@@ -334,8 +388,12 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 	}
 
 	private void addActionRow(VerticalLayout container) {
+		addActionRow(container, null);
+	}
 
-		BudgetSqlClauseRow row = new BudgetSqlClauseRow(budgetFields, container, "SET", conditionRows, null,
+	private void addActionRow(VerticalLayout container, BudgetSqlClauseEntity be) {
+
+		BudgetSqlClauseRow row = new BudgetSqlClauseRow(budgetFields, container, "SET", conditionRows, be,
 				categoryService.findAllAndBuildTree(), categoryService);
 
 		container.add(row);

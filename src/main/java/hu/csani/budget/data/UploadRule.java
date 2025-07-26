@@ -37,6 +37,9 @@ public class UploadRule {
 
     @Column(name = "source_amount_out_column")
     private String sourceAmountOutColumn;
+    
+    @Column(name = "invert_amount_out_column")
+    private Boolean invertAmountOutColumn;
 
     @Column(name = "source_currency_column")
     private String sourceCurrencyColumn;
@@ -268,6 +271,14 @@ public class UploadRule {
 
 	public void setDecimalSeparator(String decimalSeparator) {
 		this.decimalSeparator = decimalSeparator;
+	}
+
+	public Boolean getInvertAmountOutColumn() {
+		return invertAmountOutColumn;
+	}
+
+	public void setInvertAmountOutColumn(Boolean invertAmountOutColumn) {
+		this.invertAmountOutColumn = invertAmountOutColumn;
 	}
 
 

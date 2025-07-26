@@ -3,6 +3,7 @@ package hu.csani.budget.data;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -60,13 +61,17 @@ public class BudgetRuleEntity {
 	@Column(name = "updated_at")
 	private LocalDateTime updatedAt;
 
+//	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+//	@JoinColumn(name = "budget_rule_id")
+//	private List<BudgetSqlClauseEntity> conditions;
+//
+//	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+//	@JoinColumn(name = "budget_rule_id")
+//	private List<BudgetSqlClauseEntity> actions;
+	
 	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
 	@JoinColumn(name = "budget_rule_id")
-	private List<BudgetSqlClauseEntity> conditions;
-
-	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-	@JoinColumn(name = "budget_rule_id")
-	private List<BudgetActionEntity> actions;
+	private List<BudgetSqlClauseEntity> clauses;
 
 	// Constructors
 	public BudgetRuleEntity() {
@@ -158,27 +163,51 @@ public class BudgetRuleEntity {
 		this.updatedAt = updatedAt;
 	}
 
-	public List<BudgetSqlClauseEntity> getConditions() {
-		return conditions;
-	}
-
-	public void setConditions(List<BudgetSqlClauseEntity> conditions) {
-		this.conditions = conditions;
-	}
-
-	public List<BudgetActionEntity> getActions() {
-		return actions;
-	}
-
-	public void setActions(List<BudgetActionEntity> actions) {
-		this.actions = actions;
-	}
+//	public List<BudgetSqlClauseEntity> getConditions() {
+//		return conditions;
+//	}
+//
+//	public void setConditions(List<BudgetSqlClauseEntity> conditions) {
+//		this.conditions = conditions;
+//	}
+//
+//	public List<BudgetSqlClauseEntity> getActions() {
+//		return actions;
+//	}
+//
+//	public void setActions(List<BudgetSqlClauseEntity> actions) {
+//		this.actions = actions;
+//	}
+	
+	
 
 	@PrePersist
 	protected void onCreate() {
 		createdAt = LocalDateTime.now();
 		updatedAt = LocalDateTime.now();
 	}
+
+	public List<BudgetSqlClauseEntity> getClauses() {
+		return clauses;
+	}
+
+	public void setClauses(List<BudgetSqlClauseEntity> clauses) {
+		this.clauses = clauses;
+	}
+	
+	// Helper methods to filter
+	public List<BudgetSqlClauseEntity> getConditions() {
+	    return clauses.stream()
+	        .filter(clause -> "WHERE".equals(clause.getClauseType()))
+	        .collect(Collectors.toList());
+	}
+
+	public List<BudgetSqlClauseEntity> getActions() {
+	    return clauses.stream()
+	        .filter(clause -> "SET".equals(clause.getClauseType()))
+	        .collect(Collectors.toList());
+	}
+
 
 	@PreUpdate
 	protected void onUpdate() {
