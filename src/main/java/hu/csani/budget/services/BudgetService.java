@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Random;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -28,9 +29,26 @@ public class BudgetService {
 		this.jdbcTemplate = jdbcTemplate;
 		this.transactionTemplate = transactionTemplate;
 	}
-	
-	public List<Budget> findTop10ByCategoryIsNullOrderByAmountDesc() {
-		return budgetRepository.findTop10ByCategoryIsNullOrderByAmountDesc();
+
+	public List<Budget> findTop10ForUploadRule() {
+		Random random = new Random();
+//		int randomValue = random.nextInt(4); // 0-3
+		int randomValue = random.nextInt(3); // 0-1
+
+		if (1 == 1)
+			return budgetRepository.findTop30ByCategoryIsNullOrderByTransactionDateDesc();
+
+		return switch (randomValue) {
+		case 0 -> budgetRepository.findTop10ByCategoryIsNullOrderByAmountDesc();
+		case 1 -> budgetRepository.findTop10ByCategoryIsNullOrderByAmountAsc();
+		case 2 -> budgetRepository.findTop30ByCategoryIsNullOrderByTransactionDateDesc();
+		case 3 -> {
+			// TODO: Implement case 3
+			yield List.of(); // temporary empty list
+		}
+		default -> throw new IllegalStateException("Unexpected value: " + randomValue);
+		};
+
 	}
 
 	/**
@@ -106,70 +124,70 @@ public class BudgetService {
 	}
 
 	/**
-	 * Enhanced RowMapper for Budget entity with Category support
-	 * Use this when your SQL includes a JOIN with the category table
+	 * Enhanced RowMapper for Budget entity with Category support Use this when your
+	 * SQL includes a JOIN with the category table
 	 */
 	private static class BudgetRowMapperWithCategory implements RowMapper<Budget> {
-	    @Override
-	    public Budget mapRow(ResultSet rs, int rowNum) throws SQLException {
-	        Budget budget = new Budget();
-	        
-	        // Map all Budget fields
-	        budget.setBudgetId(rs.getObject("budget_id", Integer.class));
-	        // Handle Category relationship (if joined in SQL)
-	        try {
-	            Integer accountId = rs.getObject("account_id", Integer.class);
-	            if (accountId != null) {
-	                Account account= new Account();
-	                account.setAccountId(accountId);
-	                budget.setAccount(account);
-	            }
-	        } catch (SQLException e) {
-	            // Category columns not present in result set, skip
-	        }
+		@Override
+		public Budget mapRow(ResultSet rs, int rowNum) throws SQLException {
+			Budget budget = new Budget();
+
+			// Map all Budget fields
+			budget.setBudgetId(rs.getObject("budget_id", Integer.class));
+			// Handle Category relationship (if joined in SQL)
+			try {
+				Integer accountId = rs.getObject("account_id", Integer.class);
+				if (accountId != null) {
+					Account account = new Account();
+					account.setAccountId(accountId);
+					budget.setAccount(account);
+				}
+			} catch (SQLException e) {
+				// Category columns not present in result set, skip
+			}
 //	        budget.setAccount(rs.getObject("account_id", Integer.class));
-	        
-	        // Handle LocalDate fields
-	        if (rs.getDate("booking_date") != null) {
-	            budget.setBookingDate(rs.getDate("booking_date").toLocalDate());
-	        }
-	        if (rs.getDate("transaction_date") != null) {
-	            budget.setTransactionDate(rs.getDate("transaction_date").toLocalDate());
-	        }
-	        
-	        // Handle BigDecimal fields
-	        budget.setAmount(rs.getBigDecimal("amount"));
-	        budget.setAmountIn(rs.getBigDecimal("amount_in"));
-	        budget.setAmountOut(rs.getBigDecimal("amount_out"));
-	        
-	        // Handle String fields
-	        budget.setCurrency(rs.getString("currency"));
-	        budget.setDirection(rs.getString("direction"));
-	        budget.setOriginalId(rs.getString("original_id"));
-	        budget.setOtherPartyName(rs.getString("other_party_name"));
-	        budget.setOtherPartyAccountNumber(rs.getString("other_party_account_number"));
-	        budget.setTransactionType(rs.getString("transaction_type"));
-	        budget.setNote(rs.getString("note"));
-	        
-	        // Handle Integer fields
-	        budget.setCategoryRuleId(rs.getObject("category_rule_id", Integer.class));
-	        budget.setManualCategoryId(rs.getObject("manual_category_id", Integer.class));
-	        budget.setTransferId(rs.getObject("transfer_id", Integer.class));
-	        
-	        // Handle Category relationship (if joined in SQL)
-	        try {
-	            Integer categoryId = rs.getObject("category_id", Integer.class);
-	            if (categoryId != null) {
-	                Category category = new Category();
-	                category.setCategoryName("category_name");
-	                budget.setCategory(category);
-	            }
-	        } catch (SQLException e) {
-	            // Category columns not present in result set, skip
-	        }
-	        
-	        return budget;
-	    }
+
+			// Handle LocalDate fields
+			if (rs.getDate("booking_date") != null) {
+				budget.setBookingDate(rs.getDate("booking_date").toLocalDate());
+			}
+			if (rs.getDate("transaction_date") != null) {
+				budget.setTransactionDate(rs.getDate("transaction_date").toLocalDate());
+			}
+
+			// Handle BigDecimal fields
+			budget.setAmount(rs.getBigDecimal("amount"));
+			budget.setAmountIn(rs.getBigDecimal("amount_in"));
+			budget.setAmountOut(rs.getBigDecimal("amount_out"));
+
+			// Handle String fields
+			budget.setCurrency(rs.getString("currency"));
+			budget.setDirection(rs.getString("direction"));
+			budget.setOriginalId(rs.getString("original_id"));
+			budget.setOtherPartyName(rs.getString("other_party_name"));
+			budget.setOtherPartyAccountNumber(rs.getString("other_party_account_number"));
+			budget.setTransactionType(rs.getString("transaction_type"));
+			budget.setNote(rs.getString("note"));
+
+			// Handle Integer fields
+			budget.setCategoryRuleId(rs.getObject("category_rule_id", Integer.class));
+			budget.setManualCategoryId(rs.getObject("manual_category_id", Integer.class));
+			budget.setTransferId(rs.getObject("transfer_id", Integer.class));
+
+			// Handle Category relationship (if joined in SQL)
+			try {
+				Integer categoryId = rs.getObject("category_id", Integer.class);
+				if (categoryId != null) {
+					Category category = new Category();
+					category.setCategoryName("category_name");
+					budget.setCategory(category);
+				}
+			} catch (SQLException e) {
+				// Category columns not present in result set, skip
+			}
+
+			return budget;
+		}
 	}
 
 }

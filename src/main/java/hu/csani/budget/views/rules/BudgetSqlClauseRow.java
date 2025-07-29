@@ -23,9 +23,11 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextField;
 
+import hu.csani.budget.data.Account;
 import hu.csani.budget.data.Budget;
 import hu.csani.budget.data.BudgetSqlClauseEntity;
 import hu.csani.budget.data.Category;
+import hu.csani.budget.services.AccountService;
 import hu.csani.budget.services.CategoryService;
 import hu.csani.budget.views.category.CategoryCreateDialog;
 import jakarta.persistence.Column;
@@ -49,14 +51,16 @@ public class BudgetSqlClauseRow extends HorizontalLayout {
 	private final Map<String, Class<?>> budgetFields;
 
 	private CategoryService categoryService;
+	private AccountService accountService;
 
 	public BudgetSqlClauseRow(Map<String, Class<?>> budgetFields, VerticalLayout container, String clauseType,
 			List<BudgetSqlClauseRow> contidionRows, BudgetSqlClauseEntity bc, List<Category> categoryList,
-			CategoryService categoryService) {
+			CategoryService categoryService, AccountService accountService) {
 
 		this.budgetFields = budgetFields;
 		this.budgetSQLClause = bc;
 		this.categoryService = categoryService;
+		this.accountService = accountService;
 
 		if (budgetSQLClause == null) {
 			budgetSQLClause = new BudgetSqlClauseEntity();
@@ -136,9 +140,14 @@ public class BudgetSqlClauseRow extends HorizontalLayout {
 		typeLabel.setText(type == null ? "" : type.getSimpleName());
 
 		if (getField().equals("accountId")) {
-			// TODO combobox
-			opBox.setItems("isNull", "=", "!=", "<", "<=", ">", ">=");
-			valueField = new NumberField();
+			opBox.setItems("isNull", "=");
+
+			ComboBox<Account> cb = new ComboBox<Account>();
+			cb.setItems(accountService.findAll());
+			cb.setWidthFull();
+
+			valueField = cb;
+
 		} else if (getField().equals("category")) {
 			opBox.setItems("isNull", "=");
 
@@ -225,6 +234,14 @@ public class BudgetSqlClauseRow extends HorizontalLayout {
 
 		} else if (valueField == null) {
 			result = " is null";
+		} else if (valueField instanceof ComboBox) {
+			try {
+				ComboBox<Account> cbA = (ComboBox<Account>) valueField;
+				result = "" + cbA.getValue().getAccountId();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+
 		} else {
 //            result = "Unknown component type: " + valueField.getClass().getSimpleName();
 		}
@@ -249,6 +266,11 @@ public class BudgetSqlClauseRow extends HorizontalLayout {
 
 		if (!op.equals("isNull"))
 			value = getValue();
+		
+		//Exception - because its an object
+		if(field.equals("accountId")) {
+			return "account_id = "+value;
+		}
 
 		Class<?> type = getFieldType();
 
@@ -353,7 +375,15 @@ public class BudgetSqlClauseRow extends HorizontalLayout {
 			((NumberField) valueField).setValue(Double.parseDouble(cellValue.toString()));
 		} else if (valueField instanceof DatePicker) {
 			((DatePicker) valueField).setValue(LocalDate.parse(cellValue.toString()));
-		} 
+		} else if (valueField instanceof ComboBox) {
+//			if(cellValue instanceof Account) {
+//				cellValue = ((Account) cellValue).getAccountId();
+//			}
+			ComboBox<Account> cb = (ComboBox<Account>) valueField;
+
+			cb.setValue((Account) cellValue);
+
+		}
 
 	}
 

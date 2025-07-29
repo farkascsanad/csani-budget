@@ -37,6 +37,7 @@ import hu.csani.budget.data.Budget;
 import hu.csani.budget.data.BudgetRuleEntity;
 import hu.csani.budget.data.BudgetSqlClauseEntity;
 import hu.csani.budget.repositories.BudgetRuleRepository;
+import hu.csani.budget.services.AccountService;
 import hu.csani.budget.services.BudgetService;
 import hu.csani.budget.services.CategoryService;
 import hu.csani.budget.views.accounts.AccountsView;
@@ -65,8 +66,10 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 	private TextField ruleDescription = new TextField();
 
 	private BudgetService budgetService;
+	private AccountService accountService;
 	private CategoryService categoryService;
 
+	
 	private BudgetRuleEntity budgetRuleEntity;
 
 	// Conditions Section
@@ -85,11 +88,12 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 	private BudgetRuleRepository budgetRuleRepository;
 
 	public CategoryRuleCreateView(BudgetService budgetService, CategoryService categoryService,
-			BudgetRuleRepository budgetRuleRepository) {
+			BudgetRuleRepository budgetRuleRepository, AccountService accountService) {
 
 		this.budgetService = budgetService;
 		this.budgetRuleRepository = budgetRuleRepository;
 		this.categoryService = categoryService;
+		this.accountService =accountService;
 
 		if (budgetRuleEntity == null) {
 			resetBudgetEntity();
@@ -185,6 +189,9 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 		conditionRows.clear();
 		conditionsLayout.removeAll();
 		setsLayout.removeAll();
+		
+		ruleName.clear();
+		ruleDescription.clear();
 
 		addConditionRow(conditionsLayout);
 		addActionRow(setsLayout);
@@ -199,7 +206,8 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 		}
 
 		List<Budget> top10ByCategoryIsNullOrderByAmountDesc = budgetService
-				.findTop10ByCategoryIsNullOrderByAmountDesc();
+				.findTop10ForUploadRule();
+		
 
 		gridBudget.setItems(top10ByCategoryIsNullOrderByAmountDesc);
 		gridHeader.setText(HEADER_EMPTY_EXAMPLE);
@@ -380,7 +388,7 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 
 	private BudgetSqlClauseRow addConditionRow(VerticalLayout container, BudgetSqlClauseEntity bc) {
 		BudgetSqlClauseRow rowx = new BudgetSqlClauseRow(budgetFields, container, "WHERE", conditionRows, bc,
-				categoryService.findAllAndBuildTree(), categoryService);
+				categoryService.findAllAndBuildTree(), categoryService, accountService);
 
 		container.add(rowx);
 
@@ -394,7 +402,7 @@ public class CategoryRuleCreateView extends Div implements BeforeEnterObserver {
 	private void addActionRow(VerticalLayout container, BudgetSqlClauseEntity be) {
 
 		BudgetSqlClauseRow row = new BudgetSqlClauseRow(budgetFields, container, "SET", conditionRows, be,
-				categoryService.findAllAndBuildTree(), categoryService);
+				categoryService.findAllAndBuildTree(), categoryService, accountService);
 
 		container.add(row);
 	}

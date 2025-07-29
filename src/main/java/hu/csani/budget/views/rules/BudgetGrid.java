@@ -118,6 +118,9 @@ public class BudgetGrid extends Grid<Budget> {
             if (clickedColumn != null) {
                 String columnName = clickedColumn.getKey();
                 Object cellValue = getCellValue(clickedBudget, columnName);
+                
+                
+                
                 categoryRuleCreateView.handleBudgetGridDoubleClick(columnName, cellValue);
             }
         });
@@ -127,6 +130,11 @@ public class BudgetGrid extends Grid<Budget> {
     // Helper method to get cell value based on column name
     private Object getCellValue(Budget budget, String columnName) {
         try {
+        	
+        	if(columnName.equals("accountId")) {
+        		return budget.getAccount();
+        	}
+        	
             // Convert column name to getter method name
             String getterName = "get" + columnName.substring(0, 1).toUpperCase() + columnName.substring(1);
 

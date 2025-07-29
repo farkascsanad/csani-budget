@@ -23,10 +23,12 @@ public interface BudgetRepository extends JpaRepository<Budget, Integer> {
 
 	// Budgets with no category
 	List<Budget> findTop10ByCategoryIsNullOrderByAmountDesc();
-	
 
 	// Budgets with no category
-//	List<Budget> findTop10ByCategoryIsNullOrderByAmountAsc();
+	List<Budget> findTop10ByCategoryIsNullOrderByAmountAsc();
+
+	// Budgets with no category
+	List<Budget> findTop30ByCategoryIsNullOrderByTransactionDateDesc();
 
 	// Budgets with a specific category id
 	List<Budget> findTop10ByCategoryCategoryIdOrderByAmountDesc(Long categoryId);

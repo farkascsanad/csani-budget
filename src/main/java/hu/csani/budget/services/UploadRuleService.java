@@ -108,10 +108,14 @@ public class UploadRuleService {
 
 			if (rule.getSourceTransactiongDateColumn() != null && rule.getTransactionDateFormat() != null) {
 				try {
-					DateTimeFormatter dtf = DateTimeFormatter.ofPattern(rule.getTransactionDateFormat());
-					LocalDate dt = LocalDate.parse(budget.get(rule.getSourceTransactiongDateColumn()), dtf);
+//					DateTimeFormatter dtf = DateTimeFormatter.ofPattern(rule.getTransactionDateFormat());
+//					LocalDate dt = LocalDate.parse(budget.get(rule.getSourceTransactiongDateColumn()), dtf);
+
+					LocalDate dt = formatDate(rule.getTransactionDateFormat(),
+							budget.get(rule.getSourceTransactiongDateColumn()));
+
 					row.setTransactionDate(dt);
-				} catch (DateTimeParseException e) {
+				} catch (DateTimeParseException | NullPointerException e) {
 					e.printStackTrace();
 					row.setTransactionDate(null);
 				}
@@ -119,11 +123,13 @@ public class UploadRuleService {
 
 			if (rule.getSourceBookingDateColumn() != null && rule.getBookingDateFormat() != null) {
 				try {
-					DateTimeFormatter dtf = DateTimeFormatter.ofPattern(rule.getBookingDateFormat());
-					LocalDate dt = LocalDate.parse(budget.get(rule.getSourceBookingDateColumn()), dtf);
+//					DateTimeFormatter dtf = DateTimeFormatter.ofPattern(rule.getBookingDateFormat());
+//					LocalDate dt = LocalDate.parse(budget.get(rule.getSourceBookingDateColumn()), dtf);
+					LocalDate dt = formatDate(rule.getBookingDateFormat(),
+							budget.get(rule.getSourceBookingDateColumn()));
 					row.setBookingDate(dt);
-				} catch (DateTimeParseException e) {
-					e.printStackTrace();
+				} catch (DateTimeParseException | NullPointerException e) {
+//					e.printStackTrace();
 					row.setBookingDate(null);
 				}
 			}
@@ -131,26 +137,37 @@ public class UploadRuleService {
 			String regexReplacer = "[^\\.\\-0-9" + decimalSeparator + "]";
 
 			if (rule.getAmountSplitted()) {
-				
+
 //				if (decimalSeparator != null && !decimalSeparator.equals(".")) {
 //					amountStr.replace(decimalSeparator, ".");
 //				}
-				
-				String inStr = budget.get(rule.getSourceAmountInColumn()).replaceAll(regexReplacer, "");
-				String outStr = budget.get(rule.getSourceAmountOutColumn()).replaceAll(regexReplacer, "");
+
+				String inStr = budget.get(rule.getSourceAmountInColumn());
+				String outStr = budget.get(rule.getSourceAmountOutColumn());
+
+				if (inStr != null) {
+					inStr.replaceAll(regexReplacer, "");
+				} else {
+					inStr = "0";
+				}
+				if (outStr != null) {
+					outStr.replaceAll(regexReplacer, "");
+				} else {
+					outStr = "0";
+				}
+//				
 
 				if (!decimalSeparator.equals(".")) {
-					inStr.replace(decimalSeparator, ".");
-					outStr.replace(decimalSeparator, ".");
+					inStr = inStr.replace(decimalSeparator, ".");
+					outStr = outStr.replace(decimalSeparator, ".");
 				}
 				BigDecimal amountIn = toBigDecimal(inStr);
 				BigDecimal amountOut = toBigDecimal(outStr);
-				
-				
-				if(rule.getInvertAmountOutColumn()) {
+
+				if (rule.getInvertAmountOutColumn()) {
 					amountOut = amountOut.multiply(new BigDecimal(-1));
 				}
-				
+
 				BigDecimal amount = amountIn.add(amountOut);
 
 				row.setAmount(amount);
@@ -168,7 +185,7 @@ public class UploadRuleService {
 				String amountStr = budget.get(rule.getSourceAmountColumn()).replaceAll(regexReplacer, "");
 
 				if (decimalSeparator != null && !decimalSeparator.equals(".")) {
-					amountStr.replace(decimalSeparator, ".");
+					amountStr = amountStr.replace(decimalSeparator, ".");
 				}
 
 				BigDecimal amount = toBigDecimal(amountStr);
@@ -195,36 +212,24 @@ public class UploadRuleService {
 
 			if (rule.getSourceOtherPartyNameColumns() != null) {
 				String[] columns = rule.getSourceOtherPartyNameColumns().split(";");
-				StringBuilder otherParty = new StringBuilder();
-				for (String column : columns) {
-					String clnColumn = budget.getOrDefault(column, "").trim();
-					otherParty.append(clnColumn);
-				}
+				StringBuilder otherParty = processMultiColumnsIntoStringBuilder(budget, columns);
 				row.setOtherPartyName(otherParty.toString());
 			}
 
 			if (rule.getSourceOtherPartyAccountNumberColumns() != null) {
 				String[] columns = rule.getSourceOtherPartyAccountNumberColumns().split(";");
-				StringBuilder otherParty = new StringBuilder();
-				for (String column : columns) {
-					String clnColumn = budget.getOrDefault(column, "").trim();
-					otherParty.append(clnColumn);
-				}
+				StringBuilder otherParty = processMultiColumnsIntoStringBuilder(budget, columns);
 				row.setOtherPartyAccountNumber(otherParty.toString());
 			}
 
 			if (rule.getSourceTransactionTypeColumn() != null) {
 				String string = budget.getOrDefault(rule.getSourceTransactionTypeColumn(), "");
-				row.setTransactionType(string.trim());
+				row.setTransactionType(string != null ? string.trim() : "");
 			}
 
 			if (rule.getSourceNoteColumns() != null) {
 				String[] columns = rule.getSourceNoteColumns().split(";");
-				StringBuilder otherParty = new StringBuilder();
-				for (String column : columns) {
-					String clnColumn = budget.getOrDefault(column, "").trim();
-					otherParty.append(clnColumn);
-				}
+				StringBuilder otherParty = processMultiColumnsIntoStringBuilder(budget, columns);
 				row.setNote(otherParty.toString());
 			}
 
@@ -235,6 +240,41 @@ public class UploadRuleService {
 //		uploadView.setBudgetTable(exampleBudget);
 
 		return exampleBudget;
+
+	}
+
+	private StringBuilder processMultiColumnsIntoStringBuilder(Map<String, String> budget, String[] columns) {
+		StringBuilder otherParty = new StringBuilder();
+		for (String column : columns) {
+			String clnColumn = budget.getOrDefault(column, "");
+			if (clnColumn != null)
+				clnColumn = clnColumn.trim();
+			otherParty.append(clnColumn);
+		}
+		return otherParty;
+	}
+
+	private LocalDate formatDate(String transactionDateFormat, String dateString) {
+
+		try {
+			dateString  = dateString.replaceAll("[^ \\:\\.0-9]", "");
+			dateString = dateString.trim();
+
+			DateTimeFormatter dtf = DateTimeFormatter.ofPattern(transactionDateFormat);
+			LocalDate dt = LocalDate.parse(dateString, dtf);
+
+//			dt = formatDate(rule.getTransactionDateFormat(),budget.get(rule.getSourceTransactiongDateColumn()) )
+
+			return dt;
+		} catch (NullPointerException e) {
+			return null;
+		} catch (DateTimeParseException e) {
+			// Megpróbáljuk az univerzálisal, ha az excel automatikusan felismerte a dátumot
+			if (!transactionDateFormat.equals("yyyy-MM-dd"))
+				return formatDate("yyyy-MM-dd", dateString);
+		}
+
+		return null;
 
 	}
 
