@@ -117,3 +117,15 @@ java -jar target/csani-budget-1.0-SNAPSHOT.jar
 - Ask questions on [Stack Overflow](https://stackoverflow.com/questions/tagged/vaadin) or join our [Forum](https://vaadin.com/forum).
 - Report issues, create pull requests in [GitHub](https://github.com/vaadin).
 # csani-budget
+<img width="1303" height="780" alt="struct" src="https://github.com/user-attachments/assets/6a173d22-ed06-442c-b112-54425d556095" />
+
+<img width="1889" height="948" alt="accounts" src="https://github.com/user-attachments/assets/5683910e-af77-4602-878b-779bb2565d46" />
+<img width="1855" height="948" alt="rule" src="https://github.com/user-attachments/assets/4a4d6bb9-7ad1-4a35-8f75-ab39842701c2" />
+<img width="1845" height="948" alt="upload" src="https://github.com/user-attachments/assets/337cae00-b0f6-4af1-9b1f-f9083d51526f" />
+
+<img width="1485" height="948" alt="stackedchart" src="https://github.com/user-attachments/assets/052a789f-448a-4531-a747-916caac1b45f" />
+<img width="1920" height="1040" alt="runingsum_vs_sum" src="https://github.com/user-attachments/assets/ce80b4b8-7f50-488a-8679-f98929b65140" />
+<img width="1920" height="1040" alt="income" src="https://github.com/user-attachments/assets/5ab9f651-f25f-4218-b764-ffa4391daf98" />
+
+
+
