@@ -35,15 +35,28 @@ Egy költségvetés-kezelő rendszer, ami hasonlít az [Actual Budget](https://a
 A rendszer hierarchikus kategóriákat használ, például:
 
 Közlekedés
+
+
 ├── Autó
+
 │   ├── Üzemanyag
+
 │   └── Parkolás
+
 └── Tömegközlekedés
+
+
     ├── BKV
+    
+    
     └── Vonat
+    
+    
 
 Élelmiszer
+
 ├── Tesco
+
 └── SPAR
 
 
