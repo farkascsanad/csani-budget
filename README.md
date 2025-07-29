@@ -1,3 +1,57 @@
+# Csanszi – Budeg
+
+Egy költségvetés-kezelő rendszer, ami hasonlít az [Actual Budget](https://actualbudget.org/) működéséhez, de számos olyan funkcióval egészül ki, ami nekem hiányzott más rendszerekből.
+
+## Alapfunkciók (mint az Actual-ban)
+
+- Manuális adatfeltöltés (pl. Excelből)
+- Bármilyen típusú tétel kezelése: debit, credit, asset
+- Könnyű kategorizálás
+- Nem kategorizált sorok külön táblázatban jelennek meg a kategorizáló alatt
+- Dupla kattintással szabály létrehozása bármely mezőre:
+  - duplán kattintva a dátumra → `transaction_date = 2025.MM.dd`
+  - duplán kattintva a közleményre → `note = 'Spar Magyarország'`
+- Tranzakciók feldarabolása (split) – még nincs kész
+
+## Amit pluszban tud, és nekem kellett
+
+- Automatikusan felismeri, ha két saját számla között történik utalás, és azt nem számolja sem bevételnek, sem kiadásnak (esetleg tranzakciós díjként, de nálam az sincs)
+- Ezeket automatikusan egy csoportba teszi
+- Tranzakciók nem csak darabolhatók, hanem csoportosíthatók is:
+  - például ha veszek 10 múzeumjegyet, de csak 3 a miénk, a többiek visszafizetik: nem jelenik meg 10x kiadás és 7x bevételként, hanem egy csoportban a végső egyenleg -3 tételként jelenik meg
+- Magyar Államkincstár integráció normálisan működik
+- Egészségpénztári utalásoknál díj generálás is kezelve van
+- Az adatbázis helyben fut PostgreSQL-ben, így Power BI-ból vagy más adatvizualizációs eszközből könnyen betölthető
+
+## Excel feltöltő
+
+- Egyszerű Excel alapú feltöltő, ahol beállítható, hogy melyik oszlop melyik budget mezőnek felel meg
+- Csak inkrementális feltöltést támogat érdemben
+- Ha két fájl tartalmaz közös időszakot (pl. utolsó 3 nap), akkor mindkettőt feltölti
+- A felületen lehet megoldani az esetleges duplikációk levágását
+
+## Kategóriahierarchia
+
+A rendszer hierarchikus kategóriákat használ, például:
+
+Közlekedés
+├── Autó
+│ ├── Üzemanyag
+│ └── Parkolás
+└── Tömegközlekedés
+├── BKV
+└── Vonat
+
+Élelmiszer
+├── Tesco
+└── SPAR
+
+
+## Eredmények felhasználása
+
+Az adatokat betöltöm Power BI-ba, ahol kényelmesen tudok belőlük diagramokat és statisztikákat készíteni.
+
+
 # Csani-Budget
 
 This project can be used as a starting point to create your own Vaadin application with Spring Boot.
@@ -49,3 +103,4 @@ java -jar target/csani-budget-1.0-SNAPSHOT.jar
 - Find add-ons at [vaadin.com/directory](https://vaadin.com/directory).
 - Ask questions on [Stack Overflow](https://stackoverflow.com/questions/tagged/vaadin) or join our [Forum](https://vaadin.com/forum).
 - Report issues, create pull requests in [GitHub](https://github.com/vaadin).
+# csani-budget
