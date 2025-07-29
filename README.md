@@ -1,4 +1,4 @@
-# Csanszi – Budeg
+# Csanszi – Budget
 
 Egy költségvetés-kezelő rendszer, ami hasonlít az [Actual Budget](https://actualbudget.org/) működéséhez, de számos olyan funkcióval egészül ki, ami nekem hiányzott más rendszerekből.
 
@@ -36,11 +36,11 @@ A rendszer hierarchikus kategóriákat használ, például:
 
 Közlekedés
 ├── Autó
-│ ├── Üzemanyag
-│ └── Parkolás
+│   ├── Üzemanyag
+│   └── Parkolás
 └── Tömegközlekedés
-├── BKV
-└── Vonat
+    ├── BKV
+    └── Vonat
 
 Élelmiszer
 ├── Tesco
